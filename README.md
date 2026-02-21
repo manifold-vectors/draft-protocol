@@ -60,10 +60,11 @@ Add to your Claude Desktop MCP config (`claude_desktop_config.json`):
 
 That's it. DRAFT is now available as 15 tools in Claude Desktop.
 
-### Optional: Enhanced Intelligence with Ollama
+### Optional: Enhanced Intelligence with Any LLM
 
-DRAFT works out of the box with keyword matching and heuristics. For better accuracy, connect a local LLM via [Ollama](https://ollama.ai):
+DRAFT works out of the box with keyword matching and heuristics. For better accuracy, connect any LLM provider:
 
+**Ollama (local, free):**
 ```json
 {
   "mcpServers": {
@@ -71,6 +72,7 @@ DRAFT works out of the box with keyword matching and heuristics. For better accu
       "command": "python",
       "args": ["-m", "draft_protocol"],
       "env": {
+        "DRAFT_LLM_PROVIDER": "ollama",
         "DRAFT_LLM_MODEL": "llama3.2:3b",
         "DRAFT_EMBED_MODEL": "nomic-embed-text"
       }
@@ -79,12 +81,65 @@ DRAFT works out of the box with keyword matching and heuristics. For better accu
 }
 ```
 
-With Ollama, DRAFT gets:
+**OpenAI:**
+```json
+{
+  "mcpServers": {
+    "draft-protocol": {
+      "command": "python",
+      "args": ["-m", "draft_protocol"],
+      "env": {
+        "DRAFT_LLM_PROVIDER": "openai",
+        "DRAFT_LLM_MODEL": "gpt-4o-mini",
+        "DRAFT_EMBED_MODEL": "text-embedding-3-small",
+        "DRAFT_API_KEY": "sk-..."
+      }
+    }
+  }
+}
+```
+
+**Anthropic:**
+```json
+{
+  "mcpServers": {
+    "draft-protocol": {
+      "command": "python",
+      "args": ["-m", "draft_protocol"],
+      "env": {
+        "DRAFT_LLM_PROVIDER": "anthropic",
+        "DRAFT_LLM_MODEL": "claude-sonnet-4-20250514",
+        "DRAFT_API_KEY": "sk-ant-..."
+      }
+    }
+  }
+}
+```
+
+**Any OpenAI-compatible API** (Together, Groq, LM Studio, etc.):
+```json
+{
+  "mcpServers": {
+    "draft-protocol": {
+      "command": "python",
+      "args": ["-m", "draft_protocol"],
+      "env": {
+        "DRAFT_LLM_PROVIDER": "openai",
+        "DRAFT_LLM_MODEL": "meta-llama/Llama-3-70b-chat-hf",
+        "DRAFT_API_KEY": "...",
+        "DRAFT_API_BASE": "https://api.together.xyz/v1"
+      }
+    }
+  }
+}
+```
+
+With any LLM, DRAFT gets:
 - Semantic tier classification (not just keywords)
 - Embedding-based field assessment (cosine similarity)
 - Context-aware suggestion generation
 
-Without Ollama, you still get full governance — just with keyword heuristics instead of semantic understanding.
+Without an LLM, you still get full governance — just with keyword heuristics instead of semantic understanding. Auto-detection: if you set `DRAFT_LLM_MODEL` without specifying a provider, DRAFT infers it from the model name (gpt-* → openai, claude-* → anthropic, anything else → ollama).
 
 ## Tools
 

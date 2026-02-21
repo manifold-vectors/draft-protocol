@@ -5,27 +5,21 @@ Features:
   2. Field assessment — optional embedding-based cosine similarity or keyword heuristics
   3. Context-aware suggestions — optional LLM scaffolds or static templates
   4. Classification confidence scoring — 0.0-1.0 on all assessments
-  5. Graceful degradation — works without Ollama, better with it
+  5. Graceful degradation — works without any LLM, better with one
 
-When DRAFT_LLM_MODEL and DRAFT_EMBED_MODEL environment variables are set and Ollama
-is reachable, the engine uses LLM-powered classification for higher accuracy.
-Without them, keyword matching and heuristics provide solid baseline governance.
+Supports any LLM provider via DRAFT_LLM_PROVIDER env var:
+  ollama, openai (+ compatible APIs), anthropic, or none (keyword-only).
 """
-import json
 import math
-import urllib.request
 from typing import Optional
 
-from draft_protocol import storage
+from draft_protocol import providers, storage
 from draft_protocol.config import (
     CONSEQUENTIAL_TRIGGERS,
     DIMENSION_NAMES,
     DIMENSION_SCREEN_QUESTIONS,
     DRAFT_FIELDS,
-    EMBED_MODEL,
-    LLM_MODEL,
     MANDATORY_DIMENSIONS,
-    OLLAMA_URL,
     STANDARD_TRIGGERS,
 )
 
@@ -75,40 +69,19 @@ SUGGESTION_SCHEMA = {
 # ── Feature Detection ─────────────────────────────────────
 
 def _llm_available() -> bool:
-    """Check if LLM model is configured."""
-    return bool(LLM_MODEL)
+    """Check if LLM provider is configured."""
+    return providers.llm_available()
 
 
 def _embed_available() -> bool:
-    """Check if embedding model is configured."""
-    return bool(EMBED_MODEL)
+    """Check if embedding provider is configured."""
+    return providers.embed_available()
 
 
-# ── HTTP + Embedding Helpers ──────────────────────────────
-
-def _post(url: str, data: dict, timeout: int = 30) -> dict:
-    body = json.dumps(data).encode("utf-8")
-    req = urllib.request.Request(
-        url, data=body, method="POST",
-        headers={"Content-Type": "application/json"},
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read())
-
+# ── Embedding Helpers ─────────────────────────────────────
 
 def _embed(text: str) -> list:
-    if not _embed_available():
-        return []
-    try:
-        resp = _post(
-            f"{OLLAMA_URL}/api/embed",
-            {"model": EMBED_MODEL, "input": text},
-            timeout=30,
-        )
-        embs = resp.get("embeddings", [])
-        return embs[0] if embs else []
-    except Exception:
-        return []
+    return providers.embed(text)
 
 
 def _cosine_sim(a: list, b: list) -> float:
@@ -123,22 +96,8 @@ def _cosine_sim(a: list, b: list) -> float:
 
 
 def _llm_call(prompt: str, schema: dict, timeout: int = 30) -> Optional[dict]:
-    """Schema-enforced LLM call. Returns parsed dict or None on failure."""
-    if not _llm_available():
-        return None
-    try:
-        resp = _post(f"{OLLAMA_URL}/api/chat", {
-            "model": LLM_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": False,
-            "format": schema,
-            "options": {"temperature": 0.1, "num_predict": 500},
-        }, timeout=timeout)
-        content = resp.get("message", {}).get("content", "").strip()
-        result = json.loads(content)
-        return result if isinstance(result, dict) else None
-    except Exception:
-        return None
+    """Structured LLM call via configured provider. Returns parsed dict or None."""
+    return providers.chat(prompt, schema, timeout)
 
 
 # ── Tier Classification ───────────────────────────────────

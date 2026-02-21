@@ -6,10 +6,27 @@ from pathlib import Path
 DB_PATH = Path(os.environ.get("DRAFT_DB_PATH", "~/.draft_protocol/draft.db")).expanduser()
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-# ── Local LLM (optional — enhances classification accuracy) ──
-OLLAMA_URL = os.environ.get("DRAFT_OLLAMA_URL", "http://localhost:11434")
+# ── LLM Provider (optional — enhances classification accuracy) ──
+# Supported: "none" (default), "ollama", "openai", "anthropic"
+# "openai" works with any OpenAI-compatible API (Together, Groq, LM Studio, etc.)
+LLM_PROVIDER = os.environ.get("DRAFT_LLM_PROVIDER", "none")
 LLM_MODEL = os.environ.get("DRAFT_LLM_MODEL", "")
 EMBED_MODEL = os.environ.get("DRAFT_EMBED_MODEL", "")
+API_KEY = os.environ.get("DRAFT_API_KEY", "")
+API_BASE = os.environ.get("DRAFT_API_BASE", "")
+
+# Backward compatibility: if old DRAFT_OLLAMA_URL is set, use it
+if not API_BASE and os.environ.get("DRAFT_OLLAMA_URL"):
+    API_BASE = os.environ["DRAFT_OLLAMA_URL"]
+
+# Auto-detect provider from model name if not explicitly set
+if LLM_PROVIDER == "none" and LLM_MODEL:
+    if "gpt" in LLM_MODEL or "o1" in LLM_MODEL or "o3" in LLM_MODEL:
+        LLM_PROVIDER = "openai"
+    elif "claude" in LLM_MODEL:
+        LLM_PROVIDER = "anthropic"
+    elif LLM_MODEL:
+        LLM_PROVIDER = "ollama"  # Default to Ollama for unknown models
 
 # ── Tier Classification Triggers ──────────────────────────
 # Keyword-based fast path. LLM classification (if available) handles ambiguous cases.
