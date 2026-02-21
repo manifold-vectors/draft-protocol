@@ -19,7 +19,6 @@ Set via environment variables:
 """
 import json
 import urllib.request
-from typing import Optional
 
 from draft_protocol.config import (
     API_BASE,
@@ -40,7 +39,7 @@ def _post(url: str, data: dict, headers: dict, timeout: int = 30) -> dict:
 
 # ── Provider: Ollama ──────────────────────────────────────
 
-def _ollama_chat(prompt: str, schema: dict, timeout: int = 30) -> Optional[dict]:
+def _ollama_chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
     base = API_BASE or "http://localhost:11434"
     resp = _post(
         f"{base}/api/chat",
@@ -72,7 +71,7 @@ def _ollama_embed(text: str, timeout: int = 30) -> list:
 
 # ── Provider: OpenAI-compatible ───────────────────────────
 
-def _openai_chat(prompt: str, schema: dict, timeout: int = 30) -> Optional[dict]:
+def _openai_chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
     base = API_BASE or "https://api.openai.com/v1"
     headers = {
         "Content-Type": "application/json",
@@ -118,7 +117,7 @@ def _openai_embed(text: str, timeout: int = 30) -> list:
 
 # ── Provider: Anthropic ───────────────────────────────────
 
-def _anthropic_chat(prompt: str, schema: dict, timeout: int = 30) -> Optional[dict]:
+def _anthropic_chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
     base = API_BASE or "https://api.anthropic.com/v1"
     headers = {
         "Content-Type": "application/json",
@@ -180,7 +179,7 @@ def embed_available() -> bool:
     return bool(LLM_PROVIDER and LLM_PROVIDER != "none" and EMBED_MODEL)
 
 
-def chat(prompt: str, schema: dict, timeout: int = 30) -> Optional[dict]:
+def chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
     """Send a structured prompt to the configured LLM provider.
 
     Returns parsed dict matching schema, or None on any failure.

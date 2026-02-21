@@ -11,7 +11,6 @@ Supports any LLM provider via DRAFT_LLM_PROVIDER env var:
   ollama, openai (+ compatible APIs), anthropic, or none (keyword-only).
 """
 import math
-from typing import Optional
 
 from draft_protocol import providers, storage
 from draft_protocol.config import (
@@ -87,7 +86,7 @@ def _embed(text: str) -> list:
 def _cosine_sim(a: list, b: list) -> float:
     if not a or not b or len(a) != len(b):
         return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
     na = math.sqrt(sum(x * x for x in a))
     nb = math.sqrt(sum(x * x for x in b))
     if na == 0 or nb == 0:
@@ -95,7 +94,7 @@ def _cosine_sim(a: list, b: list) -> float:
     return dot / (na * nb)
 
 
-def _llm_call(prompt: str, schema: dict, timeout: int = 30) -> Optional[dict]:
+def _llm_call(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
     """Structured LLM call via configured provider. Returns parsed dict or None."""
     return providers.chat(prompt, schema, timeout)
 
@@ -145,11 +144,11 @@ Message: {message[:500]}"""
     return "CASUAL", "No escalation triggers, short message", 0.6
 
 
-def should_escalate(session: dict) -> Optional[tuple[str, str]]:
+def should_escalate(session: dict) -> tuple[str, str] | None:
     """Check if session should auto-escalate based on ambiguity count."""
     dims = session.get("dimensions", {})
     ambiguous_count = 0
-    for dim_key, fields in dims.items():
+    for _dim_key, fields in dims.items():
         if not isinstance(fields, dict) or fields.get("_screened"):
             continue
         for field_key, state in fields.items():
@@ -173,7 +172,7 @@ _field_question_embeddings: dict[str, list] = {}
 def _get_field_embedding(field_key: str) -> list:
     """Embed field question + answer-form keywords for better matching."""
     if field_key not in _field_question_embeddings:
-        for dim_key, fields in DRAFT_FIELDS.items():
+        for _dim_key, fields in DRAFT_FIELDS.items():
             if field_key in fields:
                 question = fields[field_key]
                 enrichment = _field_enrichment(field_key)
@@ -421,7 +420,7 @@ def generate_elicitation(session_id: str) -> list[dict]:
     return questions
 
 
-def _smart_suggestion(field_key: str, question: str, intent: str) -> Optional[str]:
+def _smart_suggestion(field_key: str, question: str, intent: str) -> str | None:
     if not intent:
         return _suggest_answer(field_key, intent)
 
@@ -442,7 +441,7 @@ Provide a concrete, actionable suggestion with an example if possible."""
     return _suggest_answer(field_key, intent)
 
 
-def _suggest_answer(field_key: str, intent: str) -> Optional[str]:
+def _suggest_answer(field_key: str, intent: str) -> str | None:
     scaffolds = {
         "D1": f"Based on '{intent[:80]}...', this creates [specific deliverable].",
         "D3": "If this didn't exist, what downstream work would be blocked?",
@@ -511,7 +510,7 @@ def check_gate(session_id: str) -> dict:
     if not dims:
         blockers.append("No dimensions mapped — call draft_map before checking gate")
 
-    for dim_key, fields in dims.items():
+    for _dim_key, fields in dims.items():
         if isinstance(fields, dict) and fields.get("_screened"):
             continue
         for field_key, info in fields.items():
@@ -695,7 +694,7 @@ def elicitation_review(session_id: str) -> dict:
             findings.append(f"{dim_key}: {gaps} gaps")
 
     low_conf = []
-    for dim_key, fields in dims.items():
+    for _dim_key, fields in dims.items():
         if isinstance(fields, dict) and fields.get("_screened"):
             continue
         for k, v in fields.items():

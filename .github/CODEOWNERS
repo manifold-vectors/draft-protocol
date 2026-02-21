@@ -1,0 +1,10 @@
+# CODEOWNERS — automatically request reviews
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default: founder reviews everything
+* @georgegoytia
+
+# Governance-critical files require explicit review
+src/draft_protocol/engine.py @georgegoytia
+src/draft_protocol/storage.py @georgegoytia
+src/draft_protocol/config.py @georgegoytia

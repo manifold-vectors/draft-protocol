@@ -1,0 +1,98 @@
+name: Bug Report
+description: Something isn't working correctly
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill in as much detail as you can.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: "DRAFT gate allowed execution without confirming field D1..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      description: What should have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to trigger the bug.
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: DRAFT Protocol version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: LLM Provider
+      options:
+        - none (keyword-only)
+        - ollama
+        - openai
+        - anthropic
+        - other OpenAI-compatible
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      placeholder: "3.12"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Linux
+        - macOS
+        - Windows
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste any error output or audit log entries here.
+      render: shell
+
+  - type: checkboxes
+    id: governance
+    attributes:
+      label: Governance impact
+      description: Check if this bug affects governance guarantees.
+      options:
+        - label: "Gate bypass — execution proceeded without full confirmation"
+          required: false
+        - label: "Tier misclassification — message classified at wrong tier"
+          required: false
+        - label: "Data loss — session or audit data missing or corrupt"
+          required: false

@@ -3,7 +3,6 @@ import json
 import sqlite3
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
 
 from draft_protocol.config import DB_PATH
 
@@ -70,7 +69,7 @@ def create_session(tier: str, intent: str) -> str:
     return sid
 
 
-def get_session(session_id: str) -> Optional[dict]:
+def get_session(session_id: str) -> dict | None:
     """Retrieve a session by ID."""
     conn = get_db()
     row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
@@ -83,7 +82,7 @@ def get_session(session_id: str) -> Optional[dict]:
     return d
 
 
-def get_active_session() -> Optional[dict]:
+def get_active_session() -> dict | None:
     """Get the most recent unclosed session."""
     conn = get_db()
     row = conn.execute(

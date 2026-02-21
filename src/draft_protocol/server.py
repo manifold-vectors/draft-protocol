@@ -207,10 +207,7 @@ def draft_status(session_id: str = "") -> dict:
     Args:
         session_id: Optional. Defaults to active session.
     """
-    if not session_id:
-        session = storage.get_active_session()
-    else:
-        session = storage.get_session(session_id)
+    session = storage.get_active_session() if not session_id else storage.get_session(session_id)
 
     if not session:
         return {"error": "No active session. Use draft_intake to start one."}

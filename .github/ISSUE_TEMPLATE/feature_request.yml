@@ -1,0 +1,57 @@
+name: Feature Request
+description: Suggest a new capability or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! DRAFT Protocol values governance integrity over feature count.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What gap or pain point does this feature address?
+      placeholder: "When classifying complex multi-domain requests, the keyword heuristics miss..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you've thought about.
+
+  - type: dropdown
+    id: dimension
+    attributes:
+      label: Which DRAFT dimension is most affected?
+      options:
+        - Define (D) — existence & scope
+        - Rules (R) — authority & limits
+        - Artifacts (A) — inputs & outputs
+        - Flex (F) — change control
+        - Test (T) — evaluation criteria
+        - Tier classification
+        - Provider support
+        - General / cross-cutting
+
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Principle check
+      description: DRAFT features must not weaken governance.
+      options:
+        - label: "This feature does NOT bypass the confirmation gate"
+          required: true
+        - label: "This feature does NOT reduce auditability"
+          required: true

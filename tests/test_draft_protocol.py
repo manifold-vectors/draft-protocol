@@ -139,7 +139,7 @@ class TestDimensionMapping:
     def test_field_statuses(self):
         sid = create_session("STANDARD", "Build something")
         dims = map_dimensions(sid, "Build a tool that processes CSV files and outputs JSON")
-        for dim_key, fields in dims.items():
+        for _dim_key, fields in dims.items():
             if isinstance(fields, dict) and fields.get("_screened"):
                 continue
             for fk, info in fields.items():
@@ -205,7 +205,7 @@ class TestGate:
         session = get_session(sid)
         dims = session["dimensions"]
         # Confirm every non-screened field
-        for dk, fields in dims.items():
+        for _dk, fields in dims.items():
             if isinstance(fields, dict) and fields.get("_screened"):
                 continue
             for fk in fields:

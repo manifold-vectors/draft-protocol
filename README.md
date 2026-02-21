@@ -1,5 +1,11 @@
 # DRAFT Protocol
 
+[![CI](https://github.com/georgegoytia/draft-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/georgegoytia/draft-protocol/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/draft-protocol.svg)](https://pypi.org/project/draft-protocol/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://github.com/georgegoytia/draft-protocol/blob/main/LICENSE)
+[![Typed](https://img.shields.io/badge/typing-typed-blue.svg)](https://peps.python.org/pep-0561/)
+
 **Intake governance for AI tool calls.** Ensures AI understands what you want before it does anything.
 
 DRAFT is a structured elicitation protocol that sits between you and your AI agent. Before the AI executes, DRAFT maps your intent across five dimensions, surfaces assumptions, and gates execution until everything is confirmed. No more "I assumed you meant..." after the damage is done.
@@ -196,7 +202,7 @@ Sessions are stored in SQLite at `~/.draft_protocol/draft.db` (configurable via 
 
 ## Part of Vector Gate
 
-DRAFT Protocol is the intake governance layer of [Vector Gate](https://github.com/manifold-vector), a three-gate AI governance pipeline:
+DRAFT Protocol is the intake governance layer of [Vector Gate](https://github.com/georgegoytia), a three-gate AI governance pipeline:
 
 - **Gate 1 — DRAFT** (this project): Intake governance. Ensures AI understands intent.
 - **Gate 2 — Guardian**: Output governance. Checks responses against constitutional rules.
@@ -210,8 +216,15 @@ Apache 2.0 — see [LICENSE](LICENSE).
 
 ## Contributing
 
-Issues and PRs welcome. If you find a governance gap, that's a high-priority bug.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR guidelines.
+
+- **Bug reports**: [Open an issue](https://github.com/georgegoytia/draft-protocol/issues/new?template=bug_report.yml)
+- **Feature requests**: [Open an issue](https://github.com/georgegoytia/draft-protocol/issues/new?template=feature_request.yml)
+- **Security vulnerabilities**: See [SECURITY.md](SECURITY.md)
+- **Changelog**: See [CHANGELOG.md](CHANGELOG.md)
+
+If you find a governance gap (gate bypassed when it shouldn't be), that's a **critical bug** — please report it immediately.
 
 ---
 
-Built by [Manifold Vector LLC](https://github.com/manifold-vector). AI governance that works mechanically, not behaviorally.
+Built by [Manifold Vector LLC](https://github.com/georgegoytia). AI governance that works mechanically, not behaviorally.
