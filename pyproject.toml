@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "draft-protocol"
+version = "0.1.0"
+description = "DRAFT Protocol — Intake governance for AI tool calls. Ensures AI understands human intent before execution begins."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "Manifold Vector LLC" },
+]
+keywords = ["ai", "governance", "mcp", "safety", "elicitation", "intent-verification"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "fastmcp>=2.0.0",
+]
+
+[project.optional-dependencies]
+llm = [
+    # No additional deps needed — Ollama is accessed via HTTP.
+    # Install Ollama separately: https://ollama.ai
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/manifold-vector/draft-protocol"
+Documentation = "https://github.com/manifold-vector/draft-protocol#readme"
+Issues = "https://github.com/manifold-vector/draft-protocol/issues"
+Source = "https://github.com/manifold-vector/draft-protocol"
+
+[project.scripts]
+draft-protocol = "draft_protocol.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/draft_protocol"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
