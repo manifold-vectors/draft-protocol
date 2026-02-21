@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRAFT Protocol</title>
+  <style>
+    :root {
+      --bg: #0f0f1a;
+      --surface: #1a1a2e;
+      --border: #2d2d44;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #a78bfa;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --gray: #6b7280;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 340px;
+      min-height: 200px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+    }
+
+    .header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-icon { font-size: 20px; color: var(--accent); }
+    .header-title { font-weight: 700; font-size: 15px; }
+    .header-status {
+      margin-left: auto;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--gray);
+    }
+    .header-status.online { background: var(--green); }
+    .header-status.offline { background: var(--red); }
+
+    .section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 60px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 10px;
+      font-size: 12px;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--text-dim); }
+
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+    .result {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--surface);
+      border-radius: 8px;
+      display: none;
+    }
+    .result.visible { display: block; }
+
+    .tier-label {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .tier-CASUAL { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+    .tier-STANDARD { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+    .tier-CONSEQUENTIAL { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .tier-REJECTED { background: rgba(107, 114, 128, 0.15); color: var(--gray); }
+
+    .result-row {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .session-info {
+      padding: 12px;
+      background: var(--surface);
+      border-radius: 8px;
+    }
+    .session-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-size: 12px;
+    }
+    .session-label { color: var(--text-dim); }
+    .session-value { font-weight: 600; }
+
+    .gate-badge {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .gate-GO { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+    .gate-NO-GO { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+
+    .footer {
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+    .footer a { color: var(--accent); text-decoration: none; }
+
+    .error-msg {
+      padding: 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 8px;
+      color: var(--red);
+      font-size: 11px;
+      margin-top: 8px;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    .spinner {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="header-icon">⬡</span>
+    <span class="header-title">DRAFT Protocol</span>
+    <div class="header-status" id="serverStatus" title="Server status"></div>
+  </div>
+
+  <!-- Quick Classify -->
+  <div class="section">
+    <div class="section-title">Quick Classify</div>
+    <textarea id="messageInput" placeholder="Paste or type a message to classify its governance tier..."></textarea>
+    <button class="btn btn-primary" id="classifyBtn">Classify</button>
+    <div class="result" id="classifyResult">
+      <span class="tier-label" id="tierLabel"></span>
+      <div class="result-row" id="reasoning"></div>
+      <div class="result-row" id="confidence"></div>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- Active Session -->
+  <div class="section" id="sessionSection" style="display: none;">
+    <div class="section-title">Active Session</div>
+    <div class="session-info" id="sessionInfo"></div>
+  </div>
+
+  <div class="footer">
+    <a href="https://github.com/georgegoytia/draft-protocol" target="_blank">DRAFT Protocol</a> · v0.1.0
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

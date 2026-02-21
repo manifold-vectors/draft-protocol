@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRAFT Protocol</title>
+  <style>
+    :root {
+      --bg: #0f0f1a;
+      --surface: #1a1a2e;
+      --surface2: #16213e;
+      --border: #2d2d44;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #a78bfa;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --gray: #6b7280;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 16px;
+    }
+
+    h1 {
+      font-size: 16px;
+      color: var(--accent);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .subtitle { font-size: 11px; color: var(--text-dim); margin-bottom: 16px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    textarea:focus, input[type="text"]:focus { border-color: var(--accent); }
+    ::placeholder { color: var(--text-dim); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-sm { padding: 5px 10px; font-size: 11px; }
+    .btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .row .btn { flex: 1; justify-content: center; }
+
+    /* Tier badges */
+    .tier { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+    .tier-CASUAL { background: rgba(34,197,94,0.15); color: var(--green); }
+    .tier-STANDARD { background: rgba(245,158,11,0.15); color: var(--amber); }
+    .tier-CONSEQUENTIAL { background: rgba(239,68,68,0.15); color: var(--red); }
+
+    /* Gate badges */
+    .gate { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+    .gate-GO { background: rgba(34,197,94,0.15); color: var(--green); }
+    .gate-NO-GO { background: rgba(239,68,68,0.15); color: var(--red); }
+
+    /* Field status */
+    .field-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .field-row:last-child { border-bottom: none; }
+    .field-key { font-family: monospace; color: var(--accent); font-size: 11px; }
+    .field-status { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+    .status-CONFIRMED { background: rgba(34,197,94,0.15); color: var(--green); }
+    .status-SATISFIED { background: rgba(34,197,94,0.1); color: #86efac; }
+    .status-MISSING { background: rgba(239,68,68,0.15); color: var(--red); }
+    .status-AMBIGUOUS { background: rgba(245,158,11,0.15); color: var(--amber); }
+    .status-N\/A { background: rgba(107,114,128,0.15); color: var(--gray); }
+
+    /* Questions */
+    .question-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+    .question-text { font-size: 12px; color: var(--text); margin-bottom: 6px; }
+    .question-field { font-size: 10px; color: var(--accent); font-family: monospace; }
+
+    .error {
+      padding: 10px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 6px;
+      color: var(--red);
+      font-size: 11px;
+      margin-top: 8px;
+    }
+
+    .success {
+      padding: 10px;
+      background: rgba(34,197,94,0.1);
+      border: 1px solid rgba(34,197,94,0.3);
+      border-radius: 6px;
+      color: var(--green);
+      font-size: 11px;
+      margin-top: 8px;
+    }
+
+    .hidden { display: none !important; }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .dot-green { background: var(--green); }
+    .dot-red { background: var(--red); }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>⬡ DRAFT Protocol</h1>
+  <p class="subtitle">Intake governance for AI tool calls</p>
+
+  <!-- Server Status -->
+  <div class="card" id="statusCard">
+    <div class="card-title">Server</div>
+    <div id="serverStatusText">
+      <span class="status-dot dot-red"></span>Checking...
+    </div>
+  </div>
+
+  <!-- Step 1: Create Session -->
+  <div class="card" id="createCard">
+    <div class="card-title">1. Describe Your Intent</div>
+    <textarea id="intentInput" placeholder="What do you want the AI to do? Be specific about the task, scope, and expected outcome."></textarea>
+    <div class="row">
+      <button class="btn btn-primary" id="createBtn">Start DRAFT Session</button>
+    </div>
+    <div id="createError" class="error hidden"></div>
+  </div>
+
+  <!-- Step 2: Session Active -->
+  <div class="card hidden" id="sessionCard">
+    <div class="card-title">Session Active</div>
+    <div id="sessionMeta"></div>
+  </div>
+
+  <!-- Step 3: Dimension Map -->
+  <div class="card hidden" id="fieldsCard">
+    <div class="card-title">2. Dimension Map</div>
+    <div id="fieldsContainer"></div>
+    <div class="row">
+      <button class="btn btn-ghost btn-sm" id="elicitBtn">Get Questions</button>
+      <button class="btn btn-ghost btn-sm" id="gateBtn">Check Gate</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Questions -->
+  <div class="card hidden" id="questionsCard">
+    <div class="card-title">3. Elicitation Questions</div>
+    <div id="questionsContainer"></div>
+  </div>
+
+  <!-- Step 5: Gate -->
+  <div class="card hidden" id="gateCard">
+    <div class="card-title">4. Confirmation Gate</div>
+    <div id="gateResult"></div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
