@@ -91,7 +91,8 @@ def _cosine_sim(a: list, b: list) -> float:
     nb = math.sqrt(sum(x * x for x in b))
     if na == 0 or nb == 0:
         return 0.0
-    return dot / (na * nb)
+    result: float = dot / (na * nb)
+    return result
 
 
 def _llm_call(prompt: str, schema: dict, timeout: int = 30) -> dict | None:

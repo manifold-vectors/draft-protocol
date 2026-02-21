@@ -34,7 +34,8 @@ def _post(url: str, data: dict, headers: dict, timeout: int = 30) -> dict:
     body = json.dumps(data).encode("utf-8")
     req = urllib.request.Request(url, data=body, method="POST", headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read())
+        result: dict = json.loads(resp.read())
+        return result
 
 
 # ── Provider: Ollama ──────────────────────────────────────
@@ -54,7 +55,10 @@ def _ollama_chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
         timeout=timeout,
     )
     content = resp.get("message", {}).get("content", "").strip()
-    return json.loads(content) if content else None
+    if not content:
+        return None
+    parsed: dict = json.loads(content)  # type: ignore[assignment]
+    return parsed
 
 
 def _ollama_embed(text: str, timeout: int = 30) -> list:
@@ -96,7 +100,10 @@ def _openai_chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
     # Strip markdown fences if present
     if content.startswith("```"):
         content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-    return json.loads(content) if content else None
+    if not content:
+        return None
+    parsed: dict = json.loads(content)  # type: ignore[assignment]
+    return parsed
 
 
 def _openai_embed(text: str, timeout: int = 30) -> list:
@@ -146,7 +153,10 @@ def _anthropic_chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None
     text = text.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-    return json.loads(text) if text else None
+    if not text:
+        return None
+    parsed: dict = json.loads(text)  # type: ignore[assignment]
+    return parsed
 
 
 def _anthropic_embed(text: str, timeout: int = 30) -> list:

@@ -351,7 +351,7 @@ def _next_step_for_tier(tier: str) -> str:
 
 def _dimension_summary(dimensions: dict) -> dict:
     """Summarize dimension statuses for display."""
-    summary = {}
+    summary: dict[str, str | dict[str, int]] = {}
     for dim_key in ["D", "R", "A", "F", "T"]:
         fields = dimensions.get(dim_key, {})
         if isinstance(fields, dict) and fields.get("_screened"):
@@ -363,5 +363,5 @@ def _dimension_summary(dimensions: dict) -> dict:
                 continue
             s = info.get("status", "UNMAPPED")
             statuses[s] = statuses.get(s, 0) + 1
-        summary[f"{dim_key} ({DIMENSION_NAMES.get(dim_key, '')})"] = statuses or "UNMAPPED"
+        summary[f"{dim_key} ({DIMENSION_NAMES.get(dim_key, '')})"] = statuses if statuses else "UNMAPPED"
     return summary
