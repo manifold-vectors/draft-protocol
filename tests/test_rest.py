@@ -2,10 +2,7 @@
 import json
 import os
 import tempfile
-from http.server import HTTPServer
 from io import BytesIO
-from threading import Thread
-from unittest.mock import patch
 
 _test_db = tempfile.mktemp(suffix=".db")
 os.environ["DRAFT_DB_PATH"] = _test_db
@@ -13,36 +10,12 @@ os.environ["DRAFT_DB_PATH"] = _test_db
 from draft_protocol.rest import DraftHandler  # noqa: E402
 
 
-class MockRequest:
-    """Minimal mock for HTTP request."""
-
-    def __init__(self, method: str, path: str, body: dict | None = None):
-        self.method = method
-        self.path = path
-        self.body = json.dumps(body).encode() if body else b""
-
-
-class FakeSocket:
-    """Fake socket for handler construction."""
-
-    def __init__(self):
-        self.data = b""
-
-    def makefile(self, mode, buffering=-1):
-        return BytesIO(self.data)
-
-    def sendall(self, data):
-        self.data += data
-
-
 def make_handler(method: str, path: str, body: dict | None = None) -> tuple:
     """Create a DraftHandler and capture its response."""
     body_bytes = json.dumps(body).encode() if body else b""
     request_line = f"{method} {path} HTTP/1.1\r\n"
     headers = f"Content-Type: application/json\r\nContent-Length: {len(body_bytes)}\r\n\r\n"
-    raw = request_line.encode() + headers.encode() + body_bytes
 
-    rfile = BytesIO(raw)
     wfile = BytesIO()
 
     # Construct handler with mock connection
