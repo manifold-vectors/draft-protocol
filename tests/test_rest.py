@@ -8,6 +8,7 @@ _test_db = tempfile.mktemp(suffix=".db")
 os.environ["DRAFT_DB_PATH"] = _test_db
 
 from draft_protocol.rest import DraftHandler  # noqa: E402
+from draft_protocol.storage import close_session, get_active_session  # noqa: E402
 
 
 def make_handler(method: str, path: str, body: dict | None = None) -> tuple:
@@ -66,6 +67,9 @@ class TestHealthEndpoint:
 
 class TestStatusEndpoint:
     def test_status_no_active_session(self):
+        # Close sessions left by other test files (shared module/DB)
+        while (active := get_active_session()) is not None:
+            close_session(active["id"])
         handler, wfile = make_handler("GET", "/status")
         handler.do_GET()
         status, body = parse_response(wfile)
