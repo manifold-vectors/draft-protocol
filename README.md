@@ -1,7 +1,6 @@
 # DRAFT Protocol
 
 [![CI](https://github.com/georgegoytia/draft-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/georgegoytia/draft-protocol/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/draft-protocol.svg)](https://pypi.org/project/draft-protocol/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://github.com/georgegoytia/draft-protocol/blob/main/LICENSE)
 [![Typed](https://img.shields.io/badge/typing-typed-blue.svg)](https://peps.python.org/pep-0561/)

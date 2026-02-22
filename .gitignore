@@ -38,3 +38,9 @@ Thumbs.db
 # Distribution
 *.tar.gz
 *.whl
+
+# Security
+.secrets-baseline.json
+
+# Logs
+*.log
