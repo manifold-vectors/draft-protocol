@@ -14,7 +14,6 @@ def make_handler(method: str, path: str, body: dict | None = None) -> tuple:
     """Create a DraftHandler and capture its response."""
     body_bytes = json.dumps(body).encode() if body else b""
     request_line = f"{method} {path} HTTP/1.1\r\n"
-    headers = f"Content-Type: application/json\r\nContent-Length: {len(body_bytes)}\r\n\r\n"
 
     wfile = BytesIO()
 
