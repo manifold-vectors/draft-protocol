@@ -1,19 +1,14 @@
 name: Feature Request
-description: Suggest a new capability or improvement
+description: Suggest a new feature or enhancement
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for the suggestion! DRAFT Protocol values governance integrity over feature count.
-
   - type: textarea
     id: problem
     attributes:
       label: What problem does this solve?
-      description: What gap or pain point does this feature address?
-      placeholder: "When classifying complex multi-domain requests, the keyword heuristics miss..."
+      description: What gap or limitation are you hitting?
+      placeholder: "I need DRAFT to support X because currently I have to..."
     validations:
       required: true
 
@@ -21,7 +16,7 @@ body:
     id: solution
     attributes:
       label: Proposed solution
-      description: How would you like this to work?
+      description: How should this work?
     validations:
       required: true
 
@@ -32,26 +27,29 @@ body:
       description: Other approaches you've thought about.
 
   - type: dropdown
-    id: dimension
+    id: area
     attributes:
-      label: Which DRAFT dimension is most affected?
+      label: Area
       options:
-        - Define (D) — existence & scope
-        - Rules (R) — authority & limits
-        - Artifacts (A) — inputs & outputs
-        - Flex (F) — change control
-        - Test (T) — evaluation criteria
-        - Tier classification
-        - Provider support
-        - General / cross-cutting
+        - MCP server (tools)
+        - REST API
+        - Chrome extension
+        - Engine (classification/mapping)
+        - Providers (LLM/embedding)
+        - Storage
+        - Documentation
+        - Docker/deployment
+        - Other
+    validations:
+      required: true
 
-  - type: checkboxes
-    id: principles
+  - type: dropdown
+    id: breaking
     attributes:
-      label: Principle check
-      description: DRAFT features must not weaken governance.
+      label: Would this be a breaking change?
       options:
-        - label: "This feature does NOT bypass the confirmation gate"
-          required: true
-        - label: "This feature does NOT reduce auditability"
-          required: true
+        - "No"
+        - "Yes"
+        - "Not sure"
+    validations:
+      required: true

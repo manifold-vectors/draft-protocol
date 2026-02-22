@@ -56,7 +56,15 @@ class DraftHandler(BaseHTTPRequestHandler):
         elif self.path == "/status":
             session = storage.get_active_session()
             if session:
-                self._send_json(storage.get_session_state(session["id"]))
+                gate = engine.check_gate(session["id"])
+                self._send_json({
+                    "active": True,
+                    "session_id": session["id"],
+                    "tier": session["tier"],
+                    "intent": session.get("intent", "")[:200],
+                    "gate": gate["summary"],
+                    "created_at": session.get("created_at"),
+                })
             else:
                 self._send_json({"active": False, "message": "No active session"})
         else:

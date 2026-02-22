@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `docs/architecture.md` — system design, pipeline flow, security model, file layout
+- `docs/api.md` — REST API reference with all endpoints, request/response examples
+- `examples/basic_usage.py` — library usage example (no server needed)
+- `tests/test_security.py` — prompt injection, bypass, input validation tests
+- `tests/test_rest.py` — REST API endpoint tests with mock handler
+- `Dockerfile` — production container (Python 3.13-slim, non-root, SSE default)
+- `docker-compose.example.yml` — example stack with DRAFT + Ollama
+- `.dockerignore` — keep Docker image clean
+- `.github/ISSUE_TEMPLATE/bug_report.yml` — structured bug report template
+- `.github/ISSUE_TEMPLATE/feature_request.yml` — structured feature request template
+- `.github/PULL_REQUEST_TEMPLATE.md` — PR checklist
+
+### Fixed
+- `rest.py` `/status` endpoint called nonexistent `storage.get_session_state()` — replaced with inline session + gate query
+
+### Changed
+- `docs/README.md` updated to documentation index linking all docs
+- `STRUCTURE.md` updated to reflect all new files
+
 ## [0.1.0] - 2025-02-21
 
 ### Added
@@ -24,7 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Prompt extraction attack detection (OWASP LLM07)
 - Empty/whitespace input rejection at all entry points
 - Full SQLite audit trail
+- REST API with CORS for Chrome extension and HTTP clients
+- Chrome extension for any AI chat (ChatGPT, Claude, Gemini, etc.)
 - 46 tests covering security, lifecycle, governance, and provider configuration
+- AGENTS.md, RULES.md, STRUCTURE.md for AI agent compatibility
+- Professional repo infrastructure: CONTRIBUTING, SECURITY, CODE_OF_CONDUCT
 
 [Unreleased]: https://github.com/georgegoytia/draft-protocol/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/georgegoytia/draft-protocol/releases/tag/v0.1.0
