@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-02-25
+
 ### Added
+- `RELEASING.md` — release gate checklist to prevent builder's blindness
+- Minimal working example (end-to-end transcript) in README
+- Conformance quick-scan index table at top of `CONFORMANCE.md`
 - `docs/architecture.md` — system design, pipeline flow, security model, file layout
 - `docs/api.md` — REST API reference with all endpoints, request/response examples
 - `examples/basic_usage.py` — library usage example (no server needed)
@@ -22,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `rest.py` `/status` endpoint called nonexistent `storage.get_session_state()` — replaced with inline session + gate query
+- Documented Anthropic embeddings limitation (voyage model not supported, use `text-embedding-3-small` or Ollama)
+- Added localhost-only security warning to REST API docs
 
 ### Changed
 - `docs/README.md` updated to documentation index linking all docs
@@ -50,5 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AGENTS.md, RULES.md, STRUCTURE.md for AI agent compatibility
 - Professional repo infrastructure: CONTRIBUTING, SECURITY, CODE_OF_CONDUCT
 
-[Unreleased]: https://github.com/manifold-vectors/draft-protocol/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/manifold-vectors/draft-protocol/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/manifold-vectors/draft-protocol/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/manifold-vectors/draft-protocol/releases/tag/v0.1.0

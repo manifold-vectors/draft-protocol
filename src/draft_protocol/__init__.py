@@ -13,7 +13,7 @@ Usage:
     from draft_protocol.providers import llm_available, embed_available
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # Public API — importable from `draft_protocol` directly
 from draft_protocol.engine import (
