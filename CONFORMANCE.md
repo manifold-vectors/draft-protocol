@@ -1,5 +1,16 @@
 # Conformance Findings
 
+## Quick Reference
+
+| CF-ID | Severity | Category | One-liner | Status |
+|---|---|---|---|---|
+| [CF-010](#cf-010-one-way-dimension-screening) | MEDIUM | Screening | Screened dimensions had no unscreen mechanism | FIXED v0.1.0 |
+| [CF-011](#cf-011-manual-assumptions-not-tracked) | HIGH | Assumptions | Humans couldn't add assumptions the AI missed | FIXED v0.1.0 |
+| [CF-012](#cf-012-perfunctory-confirmation-not-flagged-at-standard-tier) | MEDIUM | Confirmation Quality | Rapid "yes" to inferred fields went unchallenged | FIXED v0.1.0 |
+| [CF-013](#cf-013-rest-api-missing-authentication) | HIGH | Security | REST transport launched without authentication | FIXED v0.1.0 |
+
+---
+
 DRAFT Protocol publishes every conformance finding from production use. This practice is borrowed from aviation safety culture, where incident reporting prevents future failures and transparency builds trust.
 
 Every finding gets a CF-ID, root cause analysis, fix, and extracted rule. Findings are never deleted — they're part of the protocol's permanent record.

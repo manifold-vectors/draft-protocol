@@ -235,6 +235,9 @@ DRAFT works out of the box with keyword matching and heuristics. For better accu
   }
 }
 ```
+
+> **Note:** Anthropic does not provide an embeddings API. When using the Anthropic provider, DRAFT uses Claude for chat-based classification but embedding-based features (semantic field matching) are unavailable. For full functionality, pair Anthropic chat with a separate embedding provider, or use Ollama/OpenAI which support both chat and embeddings.
+
 </details>
 
 <details>
@@ -293,6 +296,49 @@ Add the `env` block to any MCP client config above. With an LLM, DRAFT gets sema
 > "What does a successful backup look like — file in S3, notification, verification?"
 
 **You answer. DRAFT confirms. Gate opens. AI executes with verified intent.**
+
+## End-to-End Transcript (REST API)
+
+A complete session using `curl` — copy-paste to try it yourself:
+
+```bash
+# Start the server
+python -m draft_protocol --transport rest --port 8420 &
+
+# 1. Create a session
+curl -s -X POST http://127.0.0.1:8420/session \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Build a CLI that backs up PostgreSQL to S3"}'
+# → {"session_id": "abc123", "tier": "STANDARD", "reasoning": "Keyword match: build", "confidence": 0.85}
+
+# 2. Map dimensions (provide context about your project)
+curl -s -X POST http://127.0.0.1:8420/map \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "abc123", "context": "Python CLI using boto3. Only read-only DB access. Success = verified S3 upload."}'
+# → Returns dimension map with SATISFIED, AMBIGUOUS, and MISSING fields
+
+# 3. Check what's blocking the gate
+curl -s -X POST http://127.0.0.1:8420/gate \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "abc123"}'
+# → {"passed": false, "confirmed": 2, "total": 5, "blockers": ["D3: MISSING", "A2: MISSING", "T2: MISSING"]}
+
+# 4. Confirm a missing field
+curl -s -X POST http://127.0.0.1:8420/confirm \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "abc123", "field_key": "D3", "value": "Without this, backups are manual and unreliable"}'
+# → {"field": "D3", "status": "CONFIRMED", "value": "Without this, backups are manual and unreliable"}
+
+# 5. Repeat for remaining blockers, then check the gate again
+curl -s -X POST http://127.0.0.1:8420/gate \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "abc123"}'
+# → {"passed": true, "confirmed": 5, "total": 5, "blockers": [], "summary": "[PASS]: 5/5"}
+
+# Gate passed — safe to execute.
+```
+
+> **Tip:** In MCP mode the AI client calls these tools automatically. The REST API is for non-MCP integrations and the Chrome extension.
 
 ## Security
 
