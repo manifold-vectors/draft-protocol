@@ -17,6 +17,7 @@ Set via environment variables:
   DRAFT_API_KEY=sk-...  (required for cloud providers)
   DRAFT_API_BASE=https://...  (optional custom endpoint)
 """
+
 import json
 import urllib.request
 
@@ -39,6 +40,7 @@ def _post(url: str, data: dict, headers: dict, timeout: int = 30) -> dict:
 
 
 # ── Provider: Ollama ──────────────────────────────────────
+
 
 def _ollama_chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
     base = API_BASE or "http://localhost:11434"
@@ -75,6 +77,7 @@ def _ollama_embed(text: str, timeout: int = 30) -> list:
 
 # ── Provider: OpenAI-compatible ───────────────────────────
 
+
 def _openai_chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
     base = API_BASE or "https://api.openai.com/v1"
     headers = {
@@ -82,9 +85,7 @@ def _openai_chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
         "Authorization": f"Bearer {API_KEY}",
     }
     # Build JSON schema instruction since not all OpenAI-compatible APIs support response_format
-    schema_instruction = (
-        f"\n\nRespond ONLY with valid JSON matching this schema, no other text:\n{json.dumps(schema)}"
-    )
+    schema_instruction = f"\n\nRespond ONLY with valid JSON matching this schema, no other text:\n{json.dumps(schema)}"
     resp = _post(
         f"{base}/chat/completions",
         {
@@ -124,6 +125,7 @@ def _openai_embed(text: str, timeout: int = 30) -> list:
 
 # ── Provider: Anthropic ───────────────────────────────────
 
+
 def _anthropic_chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
     base = API_BASE or "https://api.anthropic.com/v1"
     headers = {
@@ -131,9 +133,7 @@ def _anthropic_chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None
         "x-api-key": API_KEY,
         "anthropic-version": "2023-06-01",
     }
-    schema_instruction = (
-        f"\n\nRespond ONLY with valid JSON matching this schema, no other text:\n{json.dumps(schema)}"
-    )
+    schema_instruction = f"\n\nRespond ONLY with valid JSON matching this schema, no other text:\n{json.dumps(schema)}"
     resp = _post(
         f"{base}/messages",
         {

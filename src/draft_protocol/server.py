@@ -65,8 +65,9 @@ def draft_intake(message: str, tier_override: str = "") -> dict:
         }
 
     session_id = storage.create_session(tier, message)
-    storage.log_audit(session_id, "draft_intake", "session_created",
-                      f"Tier: {tier} (conf: {confidence:.2f}). {reasoning}")
+    storage.log_audit(
+        session_id, "draft_intake", "session_created", f"Tier: {tier} (conf: {confidence:.2f}). {reasoning}"
+    )
 
     result = {
         "session_id": session_id,
@@ -329,15 +330,17 @@ def draft_deescalate(session_id: str, reason: str) -> dict:
 
     new_tier = tiers[current - 1]
     storage.update_session(session_id, tier=new_tier)
-    storage.log_audit(session_id, "draft_deescalate", f"{session['tier']} -> {new_tier}",
-                      f"AUTHORIZED: {reason}")
+    storage.log_audit(session_id, "draft_deescalate", f"{session['tier']} -> {new_tier}", f"AUTHORIZED: {reason}")
     return {
-        "previous_tier": session["tier"], "new_tier": new_tier, "reason": reason,
+        "previous_tier": session["tier"],
+        "new_tier": new_tier,
+        "reason": reason,
         "note": "De-escalation honored and logged. DRAFT mapping still occurs internally.",
     }
 
 
 # ── Helpers ───────────────────────────────────────────────
+
 
 def _next_step_for_tier(tier: str) -> str:
     if tier == "CASUAL":
@@ -345,8 +348,10 @@ def _next_step_for_tier(tier: str) -> str:
     elif tier == "STANDARD":
         return "Call draft_map with the user's full context to map DRAFT dimensions."
     else:
-        return ("CONSEQUENTIAL: Call draft_map with full context. All 7 steps mandatory. "
-                "Devil's Advocate in assumptions. Review required.")
+        return (
+            "CONSEQUENTIAL: Call draft_map with full context. All 7 steps mandatory. "
+            "Devil's Advocate in assumptions. Review required."
+        )
 
 
 def _dimension_summary(dimensions: dict) -> dict:

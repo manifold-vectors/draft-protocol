@@ -10,6 +10,7 @@ Features:
 Supports any LLM provider via DRAFT_LLM_PROVIDER env var:
   ollama, openai (+ compatible APIs), anthropic, or none (keyword-only).
 """
+
 import math
 
 from draft_protocol import providers, storage
@@ -67,6 +68,7 @@ SUGGESTION_SCHEMA = {
 
 # ── Feature Detection ─────────────────────────────────────
 
+
 def _llm_available() -> bool:
     """Check if LLM provider is configured."""
     return providers.llm_available()
@@ -78,6 +80,7 @@ def _embed_available() -> bool:
 
 
 # ── Embedding Helpers ─────────────────────────────────────
+
 
 def _embed(text: str) -> list:
     return providers.embed(text)
@@ -101,6 +104,7 @@ def _llm_call(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
 
 
 # ── Tier Classification ───────────────────────────────────
+
 
 def classify_tier(message: str) -> tuple[str, str, float]:
     """Classify message into CASUAL / STANDARD / CONSEQUENTIAL.
@@ -219,8 +223,7 @@ def map_dimensions(session_id: str, context: str) -> dict:
         return {"error": f"Session {session_id} not found"}
 
     if not context or not context.strip():
-        storage.log_audit(session_id, "draft_map", "REJECTED",
-                          "Empty or whitespace-only context")
+        storage.log_audit(session_id, "draft_map", "REJECTED", "Empty or whitespace-only context")
         return {"error": "Cannot map dimensions with empty context. Provide task description."}
 
     use_llm = _llm_available()
@@ -244,8 +247,7 @@ def map_dimensions(session_id: str, context: str) -> dict:
                 continue
 
         for field_key, question in fields.items():
-            if (field_key in dimensions[dim_key]
-                    and dimensions[dim_key][field_key].get("status") == "CONFIRMED"):
+            if field_key in dimensions[dim_key] and dimensions[dim_key][field_key].get("status") == "CONFIRMED":
                 continue
 
             if use_llm:
@@ -261,8 +263,12 @@ def map_dimensions(session_id: str, context: str) -> dict:
             }
 
     storage.update_session(session_id, dimensions=dimensions)
-    storage.log_audit(session_id, "draft_map", "dimensions_mapped",
-                      f"Mapped {len(DRAFT_FIELDS)} dims ({'llm' if use_llm else 'heuristic'})")
+    storage.log_audit(
+        session_id,
+        "draft_map",
+        "dimensions_mapped",
+        f"Mapped {len(DRAFT_FIELDS)} dims ({'llm' if use_llm else 'heuristic'})",
+    )
 
     session["dimensions"] = dimensions
     esc = should_escalate(session)
@@ -310,8 +316,7 @@ Rules:
     return _assess_field_embedding(field_key, question, context, [])
 
 
-def _assess_field_embedding(field_key: str, question: str, context: str,
-                            context_emb: list) -> dict:
+def _assess_field_embedding(field_key: str, question: str, context: str, context_emb: list) -> dict:
     if not context_emb:
         context_emb = _embed(context[:1000])
     field_emb = _get_field_embedding(field_key)
@@ -323,11 +328,9 @@ def _assess_field_embedding(field_key: str, question: str, context: str,
     sim = _cosine_sim(context_emb, field_emb)
 
     if sim >= 0.55:
-        return {"status": "SATISFIED", "confidence": round(sim, 3),
-                "extracted": f"Semantic match ({sim:.3f})"}
+        return {"status": "SATISFIED", "confidence": round(sim, 3), "extracted": f"Semantic match ({sim:.3f})"}
     elif sim >= 0.40:
-        return {"status": "AMBIGUOUS", "confidence": round(sim, 3),
-                "extracted": f"Partial match ({sim:.3f})"}
+        return {"status": "AMBIGUOUS", "confidence": round(sim, 3), "extracted": f"Partial match ({sim:.3f})"}
     return {"status": "MISSING", "confidence": round(max(0.1, 1.0 - sim), 3)}
 
 
@@ -382,6 +385,7 @@ def _context_suggests_applicable(dim_key: str, context: str) -> bool:
 
 # ── Elicitation ───────────────────────────────────────────
 
+
 def generate_elicitation(session_id: str) -> list[dict]:
     """Generate targeted questions for MISSING/AMBIGUOUS fields."""
     session = storage.get_session(session_id)
@@ -402,22 +406,20 @@ def generate_elicitation(session_id: str) -> list[dict]:
             status = info.get("status", "MISSING")
             if status in ("MISSING", "AMBIGUOUS"):
                 q = DRAFT_FIELDS.get(dim_key, {}).get(field_key, "")
-                suggestion = (
-                    _smart_suggestion(field_key, q, intent) if use_llm
-                    else _suggest_answer(field_key, intent)
+                suggestion = _smart_suggestion(field_key, q, intent) if use_llm else _suggest_answer(field_key, intent)
+                questions.append(
+                    {
+                        "dimension": f"{dim_key} — {DIMENSION_NAMES.get(dim_key, dim_key)}",
+                        "field": field_key,
+                        "question": q,
+                        "current_status": status,
+                        "confidence": info.get("confidence", 0.0),
+                        "suggestion": suggestion,
+                        "extracted": info.get("extracted"),
+                    }
                 )
-                questions.append({
-                    "dimension": f"{dim_key} — {DIMENSION_NAMES.get(dim_key, dim_key)}",
-                    "field": field_key,
-                    "question": q,
-                    "current_status": status,
-                    "confidence": info.get("confidence", 0.0),
-                    "suggestion": suggestion,
-                    "extracted": info.get("extracted"),
-                })
 
-    storage.log_audit(session_id, "draft_elicit", "questions_generated",
-                      f"Generated {len(questions)} questions")
+    storage.log_audit(session_id, "draft_elicit", "questions_generated", f"Generated {len(questions)} questions")
     return questions
 
 
@@ -460,6 +462,7 @@ def _suggest_answer(field_key: str, intent: str) -> str | None:
 
 # ── Assumptions ───────────────────────────────────────────
 
+
 def generate_assumptions(session_id: str) -> list[dict]:
     """Surface key assumptions as falsifiable claims."""
     session = storage.get_session(session_id)
@@ -471,31 +474,37 @@ def generate_assumptions(session_id: str) -> list[dict]:
 
     for dim_key, fields in dims.items():
         if isinstance(fields, dict) and fields.get("_screened"):
-            assumptions.append({
-                "claim": f"Dimension {dim_key} ({DIMENSION_NAMES.get(dim_key, '')}) is not applicable.",
-                "source": "screening",
-                "falsifier": f"If this task involves {DIMENSION_NAMES.get(dim_key, '').lower()}, screening was wrong.",
-            })
+            assumptions.append(
+                {
+                    "claim": f"Dimension {dim_key} ({DIMENSION_NAMES.get(dim_key, '')}) is not applicable.",
+                    "source": "screening",
+                    "falsifier": (
+                        f"If this task involves {DIMENSION_NAMES.get(dim_key, '').lower()}, screening was wrong."
+                    ),
+                }
+            )
             continue
         for field_key, info in fields.items():
             if field_key.startswith("_"):
                 continue
             if info.get("status") == "SATISFIED" and info.get("extracted"):
-                assumptions.append({
-                    "claim": f"For {field_key}: {info['extracted']}",
-                    "source": "context_extraction",
-                    "confidence": info.get("confidence", 0.5),
-                    "falsifier": f"If wrong, re-elicit {field_key}.",
-                })
+                assumptions.append(
+                    {
+                        "claim": f"For {field_key}: {info['extracted']}",
+                        "source": "context_extraction",
+                        "confidence": info.get("confidence", 0.5),
+                        "falsifier": f"If wrong, re-elicit {field_key}.",
+                    }
+                )
 
     assumptions = assumptions[:5]
     storage.update_session(session_id, assumptions=assumptions)
-    storage.log_audit(session_id, "draft_assumptions", "generated",
-                      f"{len(assumptions)} assumptions")
+    storage.log_audit(session_id, "draft_assumptions", "generated", f"{len(assumptions)} assumptions")
     return assumptions
 
 
 # ── Gate ──────────────────────────────────────────────────
+
 
 def check_gate(session_id: str) -> dict:
     """Check whether all applicable fields are confirmed."""
@@ -523,8 +532,12 @@ def check_gate(session_id: str) -> dict:
                 extracted = info.get("extracted", "")
                 if not extracted or not str(extracted).strip() or len(str(extracted).strip()) < 3:
                     blockers.append(f"{field_key}: CONFIRMED but empty/insufficient content (possible bypass)")
-                    storage.log_audit(session_id, "draft_gate", "empty_confirm_detected",
-                                      f"{field_key} confirmed with empty/short content")
+                    storage.log_audit(
+                        session_id,
+                        "draft_gate",
+                        "empty_confirm_detected",
+                        f"{field_key} confirmed with empty/short content",
+                    )
                 else:
                     confirmed += 1
             elif status in ("MISSING", "AMBIGUOUS"):
@@ -539,17 +552,19 @@ def check_gate(session_id: str) -> dict:
     if passed:
         storage.update_session(session_id, gate_passed=1)
 
-    storage.log_audit(session_id, "draft_gate", "gate_check",
-                      f"{'PASS' if passed else 'FAIL'}: {confirmed}/{total}")
+    storage.log_audit(session_id, "draft_gate", "gate_check", f"{'PASS' if passed else 'FAIL'}: {confirmed}/{total}")
 
     return {
-        "passed": passed, "confirmed": confirmed, "total": total,
+        "passed": passed,
+        "confirmed": confirmed,
+        "total": total,
         "blockers": blockers,
         "summary": f"{'[PASS]' if passed else '[BLOCKED]'}: {confirmed}/{total}",
     }
 
 
 # ── Field Operations ──────────────────────────────────────
+
 
 def confirm_field(session_id: str, field_key: str, value: str) -> dict:
     """Confirm a DRAFT field with a human-provided answer."""
@@ -558,17 +573,22 @@ def confirm_field(session_id: str, field_key: str, value: str) -> dict:
         return {"error": "Session not found"}
 
     if not value or not value.strip():
-        storage.log_audit(session_id, "confirm_field", f"{field_key} REJECTED",
-                          "Empty or whitespace-only value")
-        return {"error": f"Cannot confirm {field_key} with empty value.",
-                "field": field_key, "status": "REJECTED"}
+        storage.log_audit(session_id, "confirm_field", f"{field_key} REJECTED", "Empty or whitespace-only value")
+        return {"error": f"Cannot confirm {field_key} with empty value.", "field": field_key, "status": "REJECTED"}
 
     stripped = value.strip()
     if len(stripped) < 3:
-        storage.log_audit(session_id, "confirm_field", f"{field_key} REJECTED",
-                          f"Value too short ({len(stripped)} chars): '{stripped}'")
-        return {"error": f"Cannot confirm {field_key} with '{stripped}'. Provide a substantive answer (3+ characters).",
-                "field": field_key, "status": "REJECTED"}
+        storage.log_audit(
+            session_id,
+            "confirm_field",
+            f"{field_key} REJECTED",
+            f"Value too short ({len(stripped)} chars): '{stripped}'",
+        )
+        return {
+            "error": f"Cannot confirm {field_key} with '{stripped}'. Provide a substantive answer (3+ characters).",
+            "field": field_key,
+            "status": "REJECTED",
+        }
 
     dims = session.get("dimensions", {})
     dim_key = field_key[0]
@@ -579,8 +599,10 @@ def confirm_field(session_id: str, field_key: str, value: str) -> dict:
 
     dims[dim_key][field_key] = {
         "question": DRAFT_FIELDS.get(dim_key, {}).get(field_key, ""),
-        "status": "CONFIRMED", "extracted": stripped,
-        "confidence": 1.0, "confirmed_by": "human",
+        "status": "CONFIRMED",
+        "extracted": stripped,
+        "confidence": 1.0,
+        "confirmed_by": "human",
     }
     storage.update_session(session_id, dimensions=dims)
     storage.log_audit(session_id, "confirm_field", f"{field_key} confirmed", stripped[:200])
@@ -605,8 +627,7 @@ def unscreen_dimension(session_id: str, dimension_key: str) -> dict:
 
     fields = DRAFT_FIELDS.get(dim_key, {})
     dims[dim_key] = {
-        fk: {"question": q, "status": "MISSING", "confidence": 0.0, "extracted": None}
-        for fk, q in fields.items()
+        fk: {"question": q, "status": "MISSING", "confidence": 0.0, "extracted": None} for fk, q in fields.items()
     }
 
     storage.update_session(session_id, dimensions=dims)
@@ -648,8 +669,9 @@ def override_gate(session_id: str, reason: str) -> dict:
         return {"note": "Already passed.", "gate": gate}
 
     storage.update_session(session_id, gate_passed=1)
-    storage.log_audit(session_id, "override_gate", "OVERRIDDEN",
-                      f"AUTHORIZED: {reason.strip()}. Blockers: {gate.get('blockers', [])}")
+    storage.log_audit(
+        session_id, "override_gate", "OVERRIDDEN", f"AUTHORIZED: {reason.strip()}. Blockers: {gate.get('blockers', [])}"
+    )
     return {"status": "OVERRIDDEN", "reason": reason.strip(), "blockers": gate.get("blockers", [])}
 
 
@@ -687,9 +709,9 @@ def elicitation_review(session_id: str) -> dict:
         if isinstance(fields, dict) and fields.get("_screened"):
             continue
         gaps = sum(
-            1 for k, v in fields.items()
-            if not k.startswith("_") and isinstance(v, dict)
-            and v.get("status") in ("MISSING", "AMBIGUOUS")
+            1
+            for k, v in fields.items()
+            if not k.startswith("_") and isinstance(v, dict) and v.get("status") in ("MISSING", "AMBIGUOUS")
         )
         if gaps > 2:
             findings.append(f"{dim_key}: {gaps} gaps")

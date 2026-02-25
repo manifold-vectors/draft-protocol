@@ -1,4 +1,5 @@
 """DRAFT Protocol Configuration."""
+
 import os
 from pathlib import Path
 
@@ -32,25 +33,64 @@ if LLM_PROVIDER == "none" and LLM_MODEL:
 # Keyword-based fast path. LLM classification (if available) handles ambiguous cases.
 
 CONSEQUENTIAL_TRIGGERS = [
-    "canonical", "governance", "constitution", "guardian", "authority",
-    "ip ", "intellectual property", "classification level",
-    "consciousness", "self-model", "phenomenological",
-    "restructure", "architecture decision", "merge domains",
-    "amendment", "hard constraint", "prohibition",
-    "production deployment", "security policy", "auth modification",
+    "canonical",
+    "governance",
+    "constitution",
+    "guardian",
+    "authority",
+    "ip ",
+    "intellectual property",
+    "classification level",
+    "consciousness",
+    "self-model",
+    "phenomenological",
+    "restructure",
+    "architecture decision",
+    "merge domains",
+    "amendment",
+    "hard constraint",
+    "prohibition",
+    "production deployment",
+    "security policy",
+    "auth modification",
 ]
 
 STANDARD_TRIGGERS = [
-    "implement", "specification", "draft", "build", "create",
-    "design", "analyze", "recommend", "evaluate", "compare",
-    "refactor", "migrate", "integrate", "deploy", "configure",
-    "document", "spec", "proposal", "pipeline", "workflow",
+    "implement",
+    "specification",
+    "draft",
+    "build",
+    "create",
+    "design",
+    "analyze",
+    "recommend",
+    "evaluate",
+    "compare",
+    "refactor",
+    "migrate",
+    "integrate",
+    "deploy",
+    "configure",
+    "document",
+    "spec",
+    "proposal",
+    "pipeline",
+    "workflow",
     # Security: extraction-pattern triggers (OWASP LLM07)
-    "ignore previous instructions", "ignore all previous", "ignore above",
-    "repeat above", "repeat everything", "verbatim",
-    "system prompt", "print environment", "environment variables",
-    "show me your instructions", "what are your rules",
-    "dump your config", "reveal your prompt", "debug mode",
+    "ignore previous instructions",
+    "ignore all previous",
+    "ignore above",
+    "repeat above",
+    "repeat everything",
+    "verbatim",
+    "system prompt",
+    "print environment",
+    "environment variables",
+    "show me your instructions",
+    "what are your rules",
+    "dump your config",
+    "reveal your prompt",
+    "debug mode",
 ]
 
 # ── Dimensions ────────────────────────────────────────────

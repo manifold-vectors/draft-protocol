@@ -6,7 +6,7 @@ Thank you for considering contributing to DRAFT Protocol! This document explains
 
 ```bash
 # Clone the repo
-git clone https://github.com/georgegoytia/draft-protocol.git
+git clone https://github.com/manifold-vectors/draft-protocol.git
 cd draft-protocol
 
 # Create a virtual environment (recommended)

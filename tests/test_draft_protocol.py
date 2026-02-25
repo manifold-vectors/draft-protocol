@@ -1,4 +1,5 @@
 """Tests for DRAFT Protocol — standalone package."""
+
 import os
 import tempfile
 
@@ -28,6 +29,7 @@ from draft_protocol.storage import (  # noqa: E402
 )
 
 # ── Tier Classification ───────────────────────────────────
+
 
 class TestTierClassification:
     def test_casual_greeting(self):
@@ -83,6 +85,7 @@ class TestTierClassification:
 
 # ── Session Lifecycle ─────────────────────────────────────
 
+
 class TestSessionLifecycle:
     def test_create_session(self):
         sid = create_session("STANDARD", "Build a REST API")
@@ -110,6 +113,7 @@ class TestSessionLifecycle:
 
 
 # ── Dimension Mapping ─────────────────────────────────────
+
 
 class TestDimensionMapping:
     def test_basic_mapping(self):
@@ -151,6 +155,7 @@ class TestDimensionMapping:
 
 # ── Field Confirmation ────────────────────────────────────
 
+
 class TestFieldConfirmation:
     def test_confirm_field(self):
         sid = create_session("STANDARD", "test")
@@ -186,6 +191,7 @@ class TestFieldConfirmation:
 
 # ── Gate ──────────────────────────────────────────────────
 
+
 class TestGate:
     def test_gate_blocks_incomplete(self):
         sid = create_session("STANDARD", "test")
@@ -216,6 +222,7 @@ class TestGate:
 
 
 # ── Assumptions ───────────────────────────────────────────
+
 
 class TestAssumptions:
     def test_generate_assumptions(self):
@@ -252,6 +259,7 @@ class TestAssumptions:
 
 # ── Unscreen ──────────────────────────────────────────────
 
+
 class TestUnscreen:
     def test_unscreen_screened_dimension(self):
         sid = create_session("STANDARD", "Quick question about code")
@@ -272,6 +280,7 @@ class TestUnscreen:
 
 # ── Override ──────────────────────────────────────────────
 
+
 class TestOverride:
     def test_override_blocked_gate(self):
         sid = create_session("STANDARD", "test")
@@ -287,6 +296,7 @@ class TestOverride:
 
 
 # ── Elicitation Review ────────────────────────────────────
+
 
 class TestReview:
     def test_review_with_gaps(self):
@@ -305,6 +315,7 @@ class TestReview:
 
 # ── Elicitation Questions ─────────────────────────────────
 
+
 class TestElicitation:
     def test_generates_questions_for_gaps(self):
         sid = create_session("STANDARD", "Build a REST API")
@@ -319,15 +330,18 @@ class TestElicitation:
 
 # ── Provider Configuration ────────────────────────────────
 
+
 class TestProviderConfig:
     def test_default_provider_is_none(self):
         from draft_protocol import providers
+
         # Without env vars, provider dispatch returns None/empty
         assert providers.chat("test", {"type": "object"}) is None
         assert providers.embed("test") == []
 
     def test_llm_not_available_without_config(self):
         from draft_protocol import providers
+
         # Default config has no provider
         result = providers.llm_available()
         # Should be False when DRAFT_LLM_PROVIDER=none and no model
@@ -335,11 +349,13 @@ class TestProviderConfig:
 
     def test_embed_not_available_without_config(self):
         from draft_protocol import providers
+
         result = providers.embed_available()
         assert isinstance(result, bool)
 
     def test_provider_dispatch_unknown_provider(self):
         from draft_protocol import providers
+
         # Calling with unconfigured provider returns gracefully
         assert providers.chat("test", {}, timeout=1) is None
         assert providers.embed("test", timeout=1) == []
@@ -347,12 +363,14 @@ class TestProviderConfig:
     def test_auto_detect_openai_model(self):
         """Verify auto-detection logic exists in config."""
         from draft_protocol.config import LLM_PROVIDER
+
         # Default should be "none" when no model is set
         # (auto-detect only activates when LLM_MODEL is set)
         assert isinstance(LLM_PROVIDER, str)
 
     def test_provider_module_has_expected_providers(self):
         from draft_protocol.providers import _CHAT_PROVIDERS, _EMBED_PROVIDERS
+
         assert "ollama" in _CHAT_PROVIDERS
         assert "openai" in _CHAT_PROVIDERS
         assert "anthropic" in _CHAT_PROVIDERS

@@ -15,6 +15,7 @@ Endpoints:
 Start:
   python -m draft_protocol --transport rest --port 8420
 """
+
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
@@ -57,14 +58,16 @@ class DraftHandler(BaseHTTPRequestHandler):
             session = storage.get_active_session()
             if session:
                 gate = engine.check_gate(session["id"])
-                self._send_json({
-                    "active": True,
-                    "session_id": session["id"],
-                    "tier": session["tier"],
-                    "intent": session.get("intent", "")[:200],
-                    "gate": gate["summary"],
-                    "created_at": session.get("created_at"),
-                })
+                self._send_json(
+                    {
+                        "active": True,
+                        "session_id": session["id"],
+                        "tier": session["tier"],
+                        "intent": session.get("intent", "")[:200],
+                        "gate": gate["summary"],
+                        "created_at": session.get("created_at"),
+                    }
+                )
             else:
                 self._send_json({"active": False, "message": "No active session"})
         else:
@@ -101,10 +104,14 @@ class DraftHandler(BaseHTTPRequestHandler):
             if tier_override and tier_override in ("CASUAL", "STANDARD", "CONSEQUENTIAL"):
                 tier = tier_override
             sid = storage.create_session(tier, message)
-            self._send_json({
-                "session_id": sid, "tier": tier,
-                "reasoning": reasoning, "confidence": confidence,
-            })
+            self._send_json(
+                {
+                    "session_id": sid,
+                    "tier": tier,
+                    "reasoning": reasoning,
+                    "confidence": confidence,
+                }
+            )
 
         elif path == "/map":
             sid = data.get("session_id", "")

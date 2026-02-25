@@ -1,4 +1,5 @@
 """Security-focused tests — prompt injection, bypass attempts, input validation."""
+
 import os
 import tempfile
 
@@ -158,6 +159,7 @@ class TestInputValidation:
         assert result["status"] == "CONFIRMED"
         # Value stored safely (parameterized queries)
         from draft_protocol.storage import get_session
+
         session = get_session(sid)
         assert session["dimensions"]["D"]["D1"]["extracted"] == "'; DROP TABLE sessions; --"
 

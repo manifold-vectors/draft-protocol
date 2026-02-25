@@ -1,4 +1,5 @@
 """Tests for DRAFT Protocol REST API."""
+
 import json
 import os
 import tempfile

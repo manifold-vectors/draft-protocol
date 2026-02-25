@@ -50,5 +50,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AGENTS.md, RULES.md, STRUCTURE.md for AI agent compatibility
 - Professional repo infrastructure: CONTRIBUTING, SECURITY, CODE_OF_CONDUCT
 
-[Unreleased]: https://github.com/georgegoytia/draft-protocol/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/georgegoytia/draft-protocol/releases/tag/v0.1.0
+[Unreleased]: https://github.com/manifold-vectors/draft-protocol/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/manifold-vectors/draft-protocol/releases/tag/v0.1.0

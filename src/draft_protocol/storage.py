@@ -1,4 +1,5 @@
 """SQLite storage for DRAFT sessions."""
+
 import json
 import sqlite3
 import uuid
@@ -85,9 +86,7 @@ def get_session(session_id: str) -> dict | None:
 def get_active_session() -> dict | None:
     """Get the most recent unclosed session."""
     conn = get_db()
-    row = conn.execute(
-        "SELECT * FROM sessions WHERE closed_at IS NULL ORDER BY created_at DESC LIMIT 1"
-    ).fetchone()
+    row = conn.execute("SELECT * FROM sessions WHERE closed_at IS NULL ORDER BY created_at DESC LIMIT 1").fetchone()
     conn.close()
     if not row:
         return None
@@ -122,8 +121,7 @@ def log_audit(session_id: str, tool_name: str, action: str, detail: str = ""):
     """Write audit trail entry."""
     conn = get_db()
     conn.execute(
-        "INSERT INTO audit_log (session_id, tool_name, action, detail, created_at) "
-        "VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO audit_log (session_id, tool_name, action, detail, created_at) VALUES (?, ?, ?, ?, ?)",
         (session_id, tool_name, action, detail, _now()),
     )
     conn.commit()

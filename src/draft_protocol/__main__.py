@@ -16,6 +16,7 @@ Environment variables (override CLI defaults):
   DRAFT_HOST       — Bind address (default: 127.0.0.1)
   DRAFT_PORT       — Port for SSE/HTTP (default: 8420)
 """
+
 import argparse
 import os
 
@@ -28,7 +29,8 @@ def main():
         description="DRAFT Protocol — Intake governance for AI tool calls.",
     )
     parser.add_argument(
-        "--transport", "-t",
+        "--transport",
+        "-t",
         choices=["stdio", "sse", "streamable-http", "rest"],
         default=os.environ.get("DRAFT_TRANSPORT", "stdio"),
         help="MCP transport protocol (default: stdio)",
@@ -39,7 +41,8 @@ def main():
         help="Bind address for SSE/HTTP (default: 127.0.0.1)",
     )
     parser.add_argument(
-        "--port", "-p",
+        "--port",
+        "-p",
         type=int,
         default=int(os.environ.get("DRAFT_PORT", "8420")),
         help="Port for SSE/HTTP (default: 8420)",
@@ -54,6 +57,7 @@ def main():
         mcp.run(transport="streamable-http", host=args.host, port=args.port)
     elif args.transport == "rest":
         from draft_protocol.rest import run_rest_server
+
         run_rest_server(host=args.host, port=args.port)
 
 

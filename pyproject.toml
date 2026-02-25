@@ -54,11 +54,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/georgegoytia/draft-protocol"
-Documentation = "https://github.com/georgegoytia/draft-protocol#readme"
-Changelog = "https://github.com/georgegoytia/draft-protocol/blob/main/CHANGELOG.md"
-Issues = "https://github.com/georgegoytia/draft-protocol/issues"
-Source = "https://github.com/georgegoytia/draft-protocol"
+Homepage = "https://github.com/manifold-vectors/draft-protocol"
+Documentation = "https://github.com/manifold-vectors/draft-protocol#readme"
+Changelog = "https://github.com/manifold-vectors/draft-protocol/blob/main/CHANGELOG.md"
+Issues = "https://github.com/manifold-vectors/draft-protocol/issues"
+Source = "https://github.com/manifold-vectors/draft-protocol"
 
 [project.scripts]
 draft-protocol = "draft_protocol.__main__:main"
