@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "draft-protocol"
-version = "0.1.1"
+version = "1.0.0"
 description = "DRAFT Protocol — Intake governance for AI tool calls. Ensures AI understands human intent before execution begins."
 readme = "README.md"
 license = "Apache-2.0"
