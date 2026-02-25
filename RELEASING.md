@@ -47,11 +47,26 @@
 
 ---
 
+## Gate 6 — Publish Sequence
+
+Run in this exact order. Do not skip steps.
+
+```
+git push origin main
+git tag v{major}.{minor}.{patch}
+git push origin v{major}.{minor}.{patch}
+```
+
+- [ ] **All commits pushed to main first.** Tag must point to the final release commit, not a stale HEAD.
+- [ ] **Tag created locally.** Format: `v{major}.{minor}.{patch}`. Must match version in pyproject.toml and __init__.py.
+- [ ] **Tag pushed.** This triggers the CI release workflow (test → build → publish → GitHub release).
+- [ ] **CI pipeline passes.** Monitor the GitHub Actions run. If it fails, delete the tag (`git push origin :refs/tags/v{version}` + `git tag -d v{version}`), fix, re-tag.
+
 ## Post-Release
 
-- [ ] **PyPI page renders correctly.** Check the published page — broken markdown is common.
-- [ ] **Install from PyPI works.** Fresh venv, `pip install draft-protocol=={version}`, run the minimal example.
-- [ ] **Tag the release on GitHub.** Release notes match CHANGELOG entry.
+- [ ] **Package registry page renders correctly.** Check PyPI/npm — broken markdown is common.
+- [ ] **Install from registry works.** Fresh venv, `pip install {package}=={version}`, run the minimal example.
+- [ ] **GitHub release notes match CHANGELOG entry.**
 
 ---
 
