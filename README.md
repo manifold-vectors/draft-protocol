@@ -1,13 +1,25 @@
 # DRAFT Protocol
 
-[![CI](https://github.com/georgegoytia/draft-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/georgegoytia/draft-protocol/actions/workflows/ci.yml)
+[![CI](https://github.com/manifold-vectors/draft-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/manifold-vectors/draft-protocol/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://github.com/georgegoytia/draft-protocol/blob/main/LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://github.com/manifold-vectors/draft-protocol/blob/main/LICENSE)
 [![Typed](https://img.shields.io/badge/typing-typed-blue.svg)](https://peps.python.org/pep-0561/)
 
-**Intake governance for AI tool calls.** Ensures AI understands what you want before it does anything.
+**Every AI guardrail watches what already went wrong. DRAFT prevents it from going wrong in the first place.**
 
-DRAFT is a structured elicitation protocol that sits between you and your AI agent. Before the AI executes, DRAFT maps your intent across five dimensions, surfaces assumptions, and gates execution until everything is confirmed. No more "I assumed you meant..." after the damage is done.
+DRAFT (Define, Rules, Artifacts, Flex, Test) is a structured intake governance protocol that forces AI agents to confirm they understand your intent before they act. Five dimensions. Three tiers. One rule: questions come before answers.
+
+```bash
+pip install draft-protocol
+```
+
+| | Output Guardrails | DRAFT Protocol |
+|---|---|---|
+| **When it acts** | After the LLM responds | Before the LLM acts |
+| **What it checks** | Toxicity, format, policy | Intent, scope, assumptions |
+| **Failure mode** | Catches bad output, wastes the call | Prevents bad calls entirely |
+| **Evidence basis** | Synthetic benchmarks | 50+ real governed sessions |
+| **Complementary?** | Yes | Yes — use both for defense-in-depth |
 
 ## The Problem
 
@@ -297,7 +309,7 @@ Sessions are stored in SQLite at `~/.draft_protocol/draft.db` (configurable via 
 
 ## Part of Vector Gate
 
-DRAFT Protocol is the intake governance layer of [Vector Gate](https://github.com/georgegoytia), a three-gate AI governance pipeline:
+DRAFT Protocol is the intake governance layer of [Vector Gate](https://github.com/manifold-vectors), a three-gate AI governance pipeline:
 
 - **Gate 1 — DRAFT** (this project): Intake governance. Ensures AI understands intent.
 - **Gate 2 — Guardian**: Output governance. Checks responses against constitutional rules.
@@ -313,8 +325,8 @@ Apache 2.0 — see [LICENSE](LICENSE).
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR guidelines.
 
-- **Bug reports**: [Open an issue](https://github.com/georgegoytia/draft-protocol/issues/new?template=bug_report.yml)
-- **Feature requests**: [Open an issue](https://github.com/georgegoytia/draft-protocol/issues/new?template=feature_request.yml)
+- **Bug reports**: [Open an issue](https://github.com/manifold-vectors/draft-protocol/issues/new?template=bug_report.yml)
+- **Feature requests**: [Open an issue](https://github.com/manifold-vectors/draft-protocol/issues/new?template=feature_request.yml)
 - **Security vulnerabilities**: See [SECURITY.md](SECURITY.md)
 - **Changelog**: See [CHANGELOG.md](CHANGELOG.md)
 
@@ -322,4 +334,4 @@ If you find a governance gap (gate bypassed when it shouldn't be), that's a **cr
 
 ---
 
-Built by [Manifold Vector LLC](https://github.com/georgegoytia). AI governance that works mechanically, not behaviorally.
+Built by [Manifold Vector LLC](https://github.com/manifold-vectors). AI governance that works mechanically, not behaviorally.
