@@ -6,6 +6,9 @@ Features:
   3. Context-aware suggestions — optional LLM scaffolds or static templates
   4. Classification confidence scoring — 0.0-1.0 on all assessments
   5. Graceful degradation — works without any LLM, better with one
+  6. Closed session guards — all operations reject closed sessions (M1.3)
+  7. Tier enum validation — rejects invalid tier strings (M1.4)
+  8. Context enrichment — gate PASS returns full dimensional mapping (M1.5)
 
 Supports any LLM provider via DRAFT_LLM_PROVIDER env var:
   ollama, openai (+ compatible APIs), anthropic, or none (keyword-only).
@@ -22,6 +25,19 @@ from draft_protocol.config import (
     MANDATORY_DIMENSIONS,
     STANDARD_TRIGGERS,
 )
+
+
+# ── M1.3: Closed Session Guard ───────────────────────────
+
+_CLOSED_SESSION_ERROR = "Session {sid} is closed. Start new session with draft_intake."
+
+
+def _check_open(session_id: str) -> dict | None:
+    """Return error dict if session is closed or missing, else None."""
+    if storage.is_session_closed(session_id):
+        return {"error": _CLOSED_SESSION_ERROR.format(sid=session_id)}
+    return None
+
 
 # ── LLM Schemas ───────────────────────────────────────────
 
@@ -218,6 +234,11 @@ def _field_enrichment(field_key: str) -> str:
 
 def map_dimensions(session_id: str, context: str) -> dict:
     """Map DRAFT dimensions against user context using LLM or heuristics."""
+    # M1.3: Closed session guard
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+
     session = storage.get_session(session_id)
     if not session:
         return {"error": f"Session {session_id} not found"}
@@ -388,6 +409,11 @@ def _context_suggests_applicable(dim_key: str, context: str) -> bool:
 
 def generate_elicitation(session_id: str) -> list[dict]:
     """Generate targeted questions for MISSING/AMBIGUOUS fields."""
+    # M1.3: Closed session guard
+    closed = _check_open(session_id)
+    if closed:
+        return [closed]
+
     session = storage.get_session(session_id)
     if not session:
         return [{"error": f"Session {session_id} not found"}]
@@ -465,6 +491,11 @@ def _suggest_answer(field_key: str, intent: str) -> str | None:
 
 def generate_assumptions(session_id: str) -> list[dict]:
     """Surface key assumptions as falsifiable claims."""
+    # M1.3: Closed session guard
+    closed = _check_open(session_id)
+    if closed:
+        return [closed]
+
     session = storage.get_session(session_id)
     if not session:
         return [{"error": f"Session {session_id} not found"}]
@@ -508,6 +539,11 @@ def generate_assumptions(session_id: str) -> list[dict]:
 
 def check_gate(session_id: str) -> dict:
     """Check whether all applicable fields are confirmed."""
+    # M1.3: Closed session guard
+    closed = _check_open(session_id)
+    if closed:
+        return {"passed": False, "blockers": [closed["error"]], "summary": "ERROR"}
+
     session = storage.get_session(session_id)
     if not session:
         return {"passed": False, "blockers": ["Session not found"], "summary": "ERROR"}
@@ -554,7 +590,7 @@ def check_gate(session_id: str) -> dict:
 
     storage.log_audit(session_id, "draft_gate", "gate_check", f"{'PASS' if passed else 'FAIL'}: {confirmed}/{total}")
 
-    return {
+    result = {
         "passed": passed,
         "confirmed": confirmed,
         "total": total,
@@ -562,12 +598,40 @@ def check_gate(session_id: str) -> dict:
         "summary": f"{'[PASS]' if passed else '[BLOCKED]'}: {confirmed}/{total}",
     }
 
+    # M1.5: Context enrichment — compliant agents get rich context for free
+    if passed:
+        enrichment = {}
+        for dim_key in ["D", "R", "A", "F", "T"]:
+            dim_fields = dims.get(dim_key, {})
+            if isinstance(dim_fields, dict) and dim_fields.get("_screened"):
+                enrichment[dim_key] = {"_screened": True, "_reason": dim_fields.get("_reason", "N/A")}
+                continue
+            dim_data = {}
+            for fk, info in dim_fields.items():
+                if fk.startswith("_") or not isinstance(info, dict):
+                    continue
+                dim_data[fk] = {
+                    "value": info.get("extracted", ""),
+                    "question": info.get("question", ""),
+                    "status": info.get("status", "UNKNOWN"),
+                }
+            enrichment[dim_key] = dim_data
+        result["context_enrichment"] = enrichment
+        result["tier"] = session.get("tier", "UNKNOWN")
+
+    return result
+
 
 # ── Field Operations ──────────────────────────────────────
 
 
 def confirm_field(session_id: str, field_key: str, value: str) -> dict:
     """Confirm a DRAFT field with a human-provided answer."""
+    # M1.3: Closed session guard
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+
     session = storage.get_session(session_id)
     if not session:
         return {"error": "Session not found"}
@@ -611,6 +675,11 @@ def confirm_field(session_id: str, field_key: str, value: str) -> dict:
 
 def unscreen_dimension(session_id: str, dimension_key: str) -> dict:
     """Reverse screening on a dimension incorrectly marked N/A."""
+    # M1.3: Closed session guard
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+
     session = storage.get_session(session_id)
     if not session:
         return {"error": "Session not found"}
@@ -637,6 +706,11 @@ def unscreen_dimension(session_id: str, dimension_key: str) -> dict:
 
 def add_assumption(session_id: str, claim: str, source: str = "manual", falsifier: str = "") -> dict:
     """Add a manually authored assumption."""
+    # M1.3: Closed session guard
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+
     session = storage.get_session(session_id)
     if not session:
         return {"error": "Session not found"}
@@ -658,6 +732,11 @@ def add_assumption(session_id: str, claim: str, source: str = "manual", falsifie
 
 def override_gate(session_id: str, reason: str) -> dict:
     """Override a blocked gate with logged reason (authorized override)."""
+    # M1.3: Closed session guard
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+
     session = storage.get_session(session_id)
     if not session:
         return {"error": "Session not found"}
@@ -677,6 +756,11 @@ def override_gate(session_id: str, reason: str) -> dict:
 
 def verify_assumption(session_id: str, index: int, verified: bool, note: str = "") -> dict:
     """Verify or reject an assumption."""
+    # M1.3: Closed session guard
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+
     session = storage.get_session(session_id)
     if not session:
         return {"error": "Session not found"}
@@ -698,6 +782,11 @@ def verify_assumption(session_id: str, index: int, verified: bool, note: str = "
 
 def elicitation_review(session_id: str) -> dict:
     """Self-assessment of elicitation quality."""
+    # M1.3: Closed session guard
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+
     session = storage.get_session(session_id)
     if not session:
         return {"error": "Session not found"}

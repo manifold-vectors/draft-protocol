@@ -21,10 +21,12 @@ from draft_protocol.engine import (  # noqa: E402
     verify_assumption,
 )
 from draft_protocol.storage import (  # noqa: E402
+    VALID_TIERS,
     close_session,
     create_session,
     get_active_session,
     get_session,
+    is_session_closed,
     log_audit,
 )
 
@@ -377,3 +379,198 @@ class TestProviderConfig:
         assert "ollama" in _EMBED_PROVIDERS
         assert "openai" in _EMBED_PROVIDERS
         assert "anthropic" in _EMBED_PROVIDERS
+
+
+# ── M1.3: Closed Session Guards ───────────────────────────
+
+
+class TestClosedSessionGuard:
+    """M1.3: All operations on closed sessions must return error."""
+
+    def _make_closed_session(self):
+        sid = create_session("STANDARD", "test")
+        map_dimensions(sid, "Build a tool for processing")
+        close_session(sid)
+        return sid
+
+    def test_is_session_closed(self):
+        sid = create_session("STANDARD", "test")
+        assert not is_session_closed(sid)
+        close_session(sid)
+        assert is_session_closed(sid)
+
+    def test_nonexistent_treated_as_closed(self):
+        assert is_session_closed("nonexistent_id_xyz")
+
+    def test_map_dimensions_blocked(self):
+        sid = self._make_closed_session()
+        result = map_dimensions(sid, "some context")
+        assert "error" in result
+        assert "closed" in result["error"].lower()
+
+    def test_generate_elicitation_blocked(self):
+        sid = self._make_closed_session()
+        result = generate_elicitation(sid)
+        assert len(result) == 1
+        assert "error" in result[0]
+        assert "closed" in result[0]["error"].lower()
+
+    def test_confirm_field_blocked(self):
+        sid = self._make_closed_session()
+        result = confirm_field(sid, "D1", "Some value here")
+        assert "error" in result
+        assert "closed" in result["error"].lower()
+
+    def test_check_gate_blocked(self):
+        sid = self._make_closed_session()
+        result = check_gate(sid)
+        assert not result["passed"]
+        assert any("closed" in b.lower() for b in result["blockers"])
+
+    def test_generate_assumptions_blocked(self):
+        sid = self._make_closed_session()
+        result = generate_assumptions(sid)
+        assert len(result) == 1
+        assert "error" in result[0]
+
+    def test_verify_assumption_blocked(self):
+        sid = self._make_closed_session()
+        result = verify_assumption(sid, 0, True)
+        assert "error" in result
+        assert "closed" in result["error"].lower()
+
+    def test_add_assumption_blocked(self):
+        sid = self._make_closed_session()
+        result = add_assumption(sid, "Test claim")
+        assert "error" in result
+        assert "closed" in result["error"].lower()
+
+    def test_override_gate_blocked(self):
+        sid = self._make_closed_session()
+        result = override_gate(sid, "Override reason")
+        assert "error" in result
+        assert "closed" in result["error"].lower()
+
+    def test_unscreen_dimension_blocked(self):
+        sid = self._make_closed_session()
+        result = unscreen_dimension(sid, "R")
+        assert "error" in result
+        assert "closed" in result["error"].lower()
+
+    def test_elicitation_review_blocked(self):
+        sid = self._make_closed_session()
+        result = elicitation_review(sid)
+        assert "error" in result
+        assert "closed" in result["error"].lower()
+
+    def test_error_message_includes_session_id(self):
+        sid = self._make_closed_session()
+        result = confirm_field(sid, "D1", "Some value")
+        assert sid in result["error"]
+
+
+# ── M1.4: Tier Enum Validation ────────────────────────────
+
+
+class TestTierEnumValidation:
+    """M1.4: Invalid tier strings must be rejected."""
+
+    def test_valid_tiers_constant_exists(self):
+        assert VALID_TIERS == {"CASUAL", "STANDARD", "CONSEQUENTIAL"}
+
+    def test_create_session_valid_tiers(self):
+        for tier in VALID_TIERS:
+            sid = create_session(tier, "test")
+            session = get_session(sid)
+            assert session["tier"] == tier
+
+    def test_create_session_invalid_tier_rejected(self):
+        import pytest
+        with pytest.raises(ValueError, match="Invalid tier"):
+            create_session("SUPER_HIGH", "test")
+
+    def test_create_session_lowercase_rejected(self):
+        import pytest
+        with pytest.raises(ValueError, match="Invalid tier"):
+            create_session("casual", "test")
+
+    def test_create_session_empty_tier_rejected(self):
+        import pytest
+        with pytest.raises(ValueError, match="Invalid tier"):
+            create_session("", "test")
+
+    def test_update_session_invalid_tier_rejected(self):
+        import pytest
+        from draft_protocol.storage import update_session
+        sid = create_session("CASUAL", "test")
+        with pytest.raises(ValueError, match="Invalid tier"):
+            update_session(sid, tier="INVALID")
+
+
+# ── M1.5: Context Enrichment Return ──────────────────────
+
+
+class TestContextEnrichment:
+    """M1.5: Gate PASS returns full dimensional mapping as structured context."""
+
+    def _make_passed_session(self):
+        sid = create_session("STANDARD", "test")
+        map_dimensions(sid, "Build a tool for processing data")
+        session = get_session(sid)
+        dims = session["dimensions"]
+        for _dk, fields in dims.items():
+            if isinstance(fields, dict) and fields.get("_screened"):
+                continue
+            for fk in fields:
+                if not fk.startswith("_"):
+                    confirm_field(sid, fk, f"Confirmed value for {fk} with enough content")
+        return sid
+
+    def test_gate_pass_includes_enrichment(self):
+        sid = self._make_passed_session()
+        gate = check_gate(sid)
+        assert gate["passed"]
+        assert "context_enrichment" in gate
+
+    def test_enrichment_has_all_dimensions(self):
+        sid = self._make_passed_session()
+        gate = check_gate(sid)
+        enrichment = gate["context_enrichment"]
+        for dim_key in ["D", "R", "A", "F", "T"]:
+            assert dim_key in enrichment
+
+    def test_enrichment_fields_have_value_and_question(self):
+        sid = self._make_passed_session()
+        gate = check_gate(sid)
+        enrichment = gate["context_enrichment"]
+        for dim_key, dim_data in enrichment.items():
+            if dim_data.get("_screened"):
+                continue
+            for fk, info in dim_data.items():
+                if fk.startswith("_"):
+                    continue
+                assert "value" in info
+                assert "question" in info
+                assert "status" in info
+
+    def test_enrichment_includes_tier(self):
+        sid = self._make_passed_session()
+        gate = check_gate(sid)
+        assert "tier" in gate
+        assert gate["tier"] == "STANDARD"
+
+    def test_gate_fail_no_enrichment(self):
+        sid = create_session("STANDARD", "test")
+        map_dimensions(sid, "Build a tool")
+        gate = check_gate(sid)
+        assert not gate["passed"]
+        assert "context_enrichment" not in gate
+
+    def test_screened_dimensions_marked_in_enrichment(self):
+        sid = self._make_passed_session()
+        gate = check_gate(sid)
+        if gate["passed"]:
+            enrichment = gate["context_enrichment"]
+            for dim_key, dim_data in enrichment.items():
+                if dim_data.get("_screened"):
+                    assert "_reason" in dim_data

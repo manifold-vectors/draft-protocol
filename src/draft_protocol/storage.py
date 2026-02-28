@@ -8,6 +8,10 @@ from datetime import datetime, timezone
 from draft_protocol.config import DB_PATH
 
 
+# M1.4: Valid tier enum — reject anything not in this set
+VALID_TIERS = {"CASUAL", "STANDARD", "CONSEQUENTIAL"}
+
+
 def get_db() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
@@ -57,6 +61,9 @@ def _now() -> str:
 
 def create_session(tier: str, intent: str) -> str:
     """Create a new DRAFT session. Returns session_id."""
+    # M1.4: Validate tier enum
+    if tier not in VALID_TIERS:
+        raise ValueError(f"Invalid tier '{tier}'. Must be one of: {', '.join(sorted(VALID_TIERS))}")
     sid = str(uuid.uuid4())[:12]
     conn = get_db()
     now = _now()
@@ -83,6 +90,16 @@ def get_session(session_id: str) -> dict | None:
     return d
 
 
+def is_session_closed(session_id: str) -> bool:
+    """Check if a session is closed. M1.3: Closed session guard."""
+    conn = get_db()
+    row = conn.execute("SELECT closed_at FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    conn.close()
+    if not row:
+        return True  # Nonexistent sessions treated as closed
+    return row["closed_at"] is not None
+
+
 def get_active_session() -> dict | None:
     """Get the most recent unclosed session."""
     conn = get_db()
@@ -98,6 +115,9 @@ def get_active_session() -> dict | None:
 
 def update_session(session_id: str, **kwargs):
     """Update session fields. JSON fields auto-serialized."""
+    # M1.4: Validate tier if being updated
+    if "tier" in kwargs and kwargs["tier"] not in VALID_TIERS:
+        raise ValueError(f"Invalid tier '{kwargs['tier']}'. Must be one of: {', '.join(sorted(VALID_TIERS))}")
     conn = get_db()
     sets = ["updated_at = ?"]
     vals = [_now()]
