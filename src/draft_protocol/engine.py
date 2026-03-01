@@ -26,7 +26,6 @@ from draft_protocol.config import (
     STANDARD_TRIGGERS,
 )
 
-
 # ── M1.3: Closed Session Guard ───────────────────────────
 
 _CLOSED_SESSION_ERROR = "Session {sid} is closed. Start new session with draft_intake."

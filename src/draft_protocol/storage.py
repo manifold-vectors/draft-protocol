@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 
 from draft_protocol.config import DB_PATH
 
-
 # M1.4: Valid tier enum — reject anything not in this set
 VALID_TIERS = {"CASUAL", "STANDARD", "CONSEQUENTIAL"}
 

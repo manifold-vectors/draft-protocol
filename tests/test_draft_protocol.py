@@ -476,7 +476,7 @@ class TestTierEnumValidation:
     """M1.4: Invalid tier strings must be rejected."""
 
     def test_valid_tiers_constant_exists(self):
-        assert VALID_TIERS == {"CASUAL", "STANDARD", "CONSEQUENTIAL"}
+        assert {"CASUAL", "STANDARD", "CONSEQUENTIAL"} == VALID_TIERS
 
     def test_create_session_valid_tiers(self):
         for tier in VALID_TIERS:
@@ -501,6 +501,7 @@ class TestTierEnumValidation:
 
     def test_update_session_invalid_tier_rejected(self):
         import pytest
+
         from draft_protocol.storage import update_session
         sid = create_session("CASUAL", "test")
         with pytest.raises(ValueError, match="Invalid tier"):
@@ -543,7 +544,7 @@ class TestContextEnrichment:
         sid = self._make_passed_session()
         gate = check_gate(sid)
         enrichment = gate["context_enrichment"]
-        for dim_key, dim_data in enrichment.items():
+        for _dim_key, dim_data in enrichment.items():
             if dim_data.get("_screened"):
                 continue
             for fk, info in dim_data.items():
@@ -571,6 +572,6 @@ class TestContextEnrichment:
         gate = check_gate(sid)
         if gate["passed"]:
             enrichment = gate["context_enrichment"]
-            for dim_key, dim_data in enrichment.items():
+            for _dim_key, dim_data in enrichment.items():
                 if dim_data.get("_screened"):
                     assert "_reason" in dim_data
