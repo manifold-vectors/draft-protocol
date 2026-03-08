@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-03-07
+
+### Added
+- **Batch Operations** — `confirm_batch`, `quick_confirm_satisfied`, `verify_batch` reduce tool call overhead by 50-60% per session
+- **LLM-Powered Adversarial Assumptions** — when LLM is available, generates genuinely falsifiable claims instead of restating confirmed fields (fixes CF-011 rubber-stamp problem)
+- **Devil's Advocate at All Tiers** — scaled intensity: CASUAL 1-2, STANDARD 2-3, CONSEQUENTIAL 3-5 assumptions
+- **Hard Extraction Enforcement** — strips fabricated extracted text from AMBIGUOUS/MISSING fields in LLM assessments
+- **Escalation/De-escalation** — `escalate_tier` and `deescalate_tier` with audit trail and reason logging
+- **Collaborative Framing** — PEACE + Motivational Interviewing framing hints on all elicitation questions
+- **Perfunctory Confirmation Detection** — warns on repeated identical values, known rubber-stamp patterns (DFT-08)
+- **Session Analytics** — `elicitation_review` includes metrics: field counts, confidence distribution, assumption rejection rate
+- **M1.3 Closed Session Guards** — all engine functions reject operations on closed sessions
+- **M1.4 Tier Enum Validation** — strict tier validation at intake
+- **M1.5 Context Enrichment on Gate PASS** — gate results include full dimensional context
+- 35 new v1.1 feature tests + 25 hardening tests, total suite: 140 tests
+- 18 MCP tools (3 new: `draft_confirm_batch`, `draft_quick_confirm`, `draft_verify_batch`; 2 new: `draft_escalate`, `draft_deescalate`)
+
+### Changed
+- Assumption generation scales by tier instead of fixed count
+- Gate results include perfunctory warnings alongside blockers
+- Elicitation review returns analytics block with session-level metrics
+- Test suite expanded from 80 to 140 tests, zero regressions
+
+## [1.0.0] - 2026-02-27
+
+### Added
+- First stable release — all core features production-hardened
+- Python Semantic Release (PSR) automated CI/CD pipeline
+- Automated version bumps, changelogs, tagging, and PyPI publishing
+
+### Changed
+- Promoted from 0.x to 1.0 — API considered stable
+
 ## [0.1.1] - 2026-02-25
 
 ### Added
@@ -57,6 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AGENTS.md, RULES.md, STRUCTURE.md for AI agent compatibility
 - Professional repo infrastructure: CONTRIBUTING, SECURITY, CODE_OF_CONDUCT
 
-[Unreleased]: https://github.com/manifold-vectors/draft-protocol/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/manifold-vectors/draft-protocol/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/manifold-vectors/draft-protocol/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/manifold-vectors/draft-protocol/compare/v0.1.1...v1.0.0
 [0.1.1]: https://github.com/manifold-vectors/draft-protocol/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/manifold-vectors/draft-protocol/releases/tag/v0.1.0

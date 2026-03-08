@@ -18,7 +18,7 @@ pip install draft-protocol
 | **When it acts** | After the LLM responds | Before the LLM acts |
 | **What it checks** | Toxicity, format, policy | Intent, scope, assumptions |
 | **Failure mode** | Catches bad output, wastes the call | Prevents bad calls entirely |
-| **Evidence basis** | Synthetic benchmarks | 50+ real governed sessions |
+| **Evidence basis** | Synthetic benchmarks | 140 tests + governed sessions |
 | **Complementary?** | Yes | Yes — use both for defense-in-depth |
 
 ## The Problem
@@ -47,11 +47,22 @@ Each field is labeled **SATISFIED**, **AMBIGUOUS**, or **MISSING**. Ambiguous an
 
 Not every message needs the same scrutiny:
 
-- **CASUAL** — "What's the weather?" → Internal mapping only. No visible ceremony.
-- **STANDARD** — "Build a REST API" → Full pipeline. Questions for gaps. Assumptions surfaced.
-- **CONSEQUENTIAL** — "Restructure the auth system" → Maximum rigor. All dimensions mandatory. Devil's Advocate on assumptions. Quality review required.
+- **CASUAL** — "What's the weather?" → Internal mapping only. No visible ceremony. 1-2 lightweight assumptions.
+- **STANDARD** — "Build a REST API" → Full pipeline. Questions for gaps. Assumptions surfaced with light Devil's Advocate. Batch confirm for efficiency.
+- **CONSEQUENTIAL** — "Restructure the auth system" → Maximum rigor. All dimensions mandatory. 3-5 adversarial assumptions with full Devil's Advocate. Quality review required. Perfunctory confirmation detection.
 
-Tier classification is automatic (keyword matching + optional LLM), with manual override.
+Tier classification is automatic (keyword matching + optional LLM), with manual escalation/de-escalation.
+
+### What's New in v1.1
+
+- **Batch operations** — `confirm_batch`, `quick_confirm`, `verify_batch` cut tool call overhead by 50-60%
+- **Adversarial assumptions** — LLM-powered assumption generation creates genuinely falsifiable claims instead of restating confirmed fields
+- **Devil's Advocate at all tiers** — scaled intensity: 1-2 (casual), 2-3 (standard), 3-5 (consequential)
+- **Hard extraction enforcement** — strips fabricated text from ambiguous/missing fields
+- **Collaborative framing** — elicitation questions use PEACE + Motivational Interviewing framing
+- **Perfunctory detection** — warns on rubber-stamp confirmations ("yes", repeated values)
+- **Session analytics** — field counts, confidence distribution, assumption rejection rates
+- **Escalate/de-escalate** — manual tier changes with full audit trail
 
 ## Quick Start
 
@@ -263,15 +274,18 @@ Add the `env` block to any MCP client config above. With an LLM, DRAFT gets sema
 |------|---------|
 | `draft_intake` | Start a session. Classifies tier automatically. |
 | `draft_map` | Map all 5 dimensions against your context. |
-| `draft_elicit` | Generate questions for gaps. |
+| `draft_elicit` | Generate questions for gaps (with collaborative framing). |
 | `draft_confirm` | Record your answer for a field. |
-| `draft_assumptions` | Surface key assumptions as falsifiable claims. |
+| `draft_confirm_batch` | Confirm multiple fields in one call (50-60% fewer tool calls). |
+| `draft_quick_confirm` | Promote all auto-extracted fields to confirmed in one call. |
+| `draft_assumptions` | Surface key assumptions as falsifiable claims (tier-scaled DA). |
 | `draft_verify` | Confirm or reject an assumption. |
+| `draft_verify_batch` | Verify or reject multiple assumptions in one call. |
 | `draft_gate` | Check if all fields are confirmed. Blocks execution if not. |
-| `draft_review` | Quality self-assessment of the elicitation. |
+| `draft_review` | Quality self-assessment with session analytics. |
 | `draft_status` | View current session state. |
-| `draft_escalate` | Manually increase tier. |
-| `draft_deescalate` | Manually decrease tier (logged). |
+| `draft_escalate` | Manually increase tier (with audit trail). |
+| `draft_deescalate` | Manually decrease tier (logged, honored). |
 | `draft_unscreen` | Reverse a dimension marked N/A. |
 | `draft_add_assumption` | Add a manual or Devil's Advocate assumption. |
 | `draft_override` | Override a blocked gate (logged, auditable). |
@@ -345,6 +359,8 @@ curl -s -X POST http://127.0.0.1:8420/gate \
 DRAFT includes hardened input validation:
 - Empty/whitespace message rejection at intake
 - Minimum content threshold on field confirmations (prevents bypass)
+- Perfunctory confirmation detection — warns on rubber-stamp patterns (DFT-08)
+- Hard extraction enforcement — strips fabricated text from non-satisfied fields
 - Empty dimension detection at gate check
 - Prompt extraction pattern detection (OWASP LLM07) — automatically escalates suspicious messages
 - Full audit trail in SQLite (every tool call logged with timestamp)

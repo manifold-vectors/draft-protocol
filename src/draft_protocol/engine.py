@@ -332,6 +332,9 @@ Rules:
 
     result = _llm_call(prompt, FIELD_SCHEMA, timeout=20)
     if result and result.get("status") in ("SATISFIED", "AMBIGUOUS", "MISSING"):
+        # Hard enforcement: strip fabricated extractions from non-SATISFIED fields
+        if result["status"] in ("AMBIGUOUS", "MISSING"):
+            result["extracted"] = ""
         return result
     return _assess_field_embedding(field_key, question, context, [])
 
@@ -445,7 +448,19 @@ def generate_elicitation(session_id: str) -> list[dict]:
                 )
 
     storage.log_audit(session_id, "draft_elicit", "questions_generated", f"Generated {len(questions)} questions")
+
+    # Collaborative framing (PEACE + MI) — added to each question
+    for q in questions:
+        q["framing"] = _collaborative_frame(q["field"], q.get("current_status", "MISSING"))
+
     return questions
+
+
+def _collaborative_frame(field_key: str, status: str) -> str:
+    """Generate collaborative framing hint for a question (PEACE + MI)."""
+    if status == "AMBIGUOUS":
+        return f"I picked up something for {field_key} but need your clarification to get it right."
+    return f"I couldn't find {field_key} in what you've shared — your input here will shape the work."
 
 
 def _smart_suggestion(field_key: str, question: str, intent: str) -> str | None:
@@ -487,9 +502,27 @@ def _suggest_answer(field_key: str, intent: str) -> str | None:
 
 # ── Assumptions ───────────────────────────────────────────
 
+_ASSUMPTION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "claim": {"type": "string"},
+        "falsifier": {"type": "string"},
+        "impact": {"type": "string"},
+    },
+    "required": ["claim", "falsifier"],
+}
+
 
 def generate_assumptions(session_id: str) -> list[dict]:
-    """Surface key assumptions as falsifiable claims."""
+    """Surface key assumptions as falsifiable claims.
+
+    When LLM is available, generates adversarial assumptions that test
+    genuine risks rather than restating confirmed fields.
+    Devil's Advocate intensity scales by tier:
+      CASUAL: 1-2 lightweight assumptions
+      STANDARD: 2-3 assumptions with light DA
+      CONSEQUENTIAL: 3-5 assumptions with full DA
+    """
     # M1.3: Closed session guard
     closed = _check_open(session_id)
     if closed:
@@ -500,40 +533,151 @@ def generate_assumptions(session_id: str) -> list[dict]:
         return [{"error": f"Session {session_id} not found"}]
 
     dims = session.get("dimensions", {})
+    tier = session.get("tier", "STANDARD")
+    use_llm = _llm_available()
+
+    # Determine assumption count by tier
+    max_assumptions = {"CASUAL": 2, "STANDARD": 3, "CONSEQUENTIAL": 5}.get(tier, 3)
+
+    if use_llm:
+        assumptions = _generate_llm_assumptions(dims, session.get("intent", ""), tier, max_assumptions)
+    else:
+        assumptions = _generate_heuristic_assumptions(dims, max_assumptions)
+
+    storage.update_session(session_id, assumptions=assumptions)
+    storage.log_audit(
+        session_id,
+        "draft_assumptions",
+        "generated",
+        f"{len(assumptions)} assumptions (tier={tier}, {'llm' if use_llm else 'heuristic'})",
+    )
+    return assumptions
+
+
+def _generate_llm_assumptions(dims: dict, intent: str, tier: str, max_count: int) -> list[dict]:
+    """Generate adversarial assumptions using LLM."""
+    # Collect confirmed field summaries for context
+    field_summary = []
+    for dim_key, fields in dims.items():
+        if isinstance(fields, dict) and fields.get("_screened"):
+            field_summary.append(f"{dim_key}: screened as N/A")
+            continue
+        for fk, info in fields.items():
+            if fk.startswith("_") or not isinstance(info, dict):
+                continue
+            status = info.get("status", "MISSING")
+            extracted = info.get("extracted", "")
+            if status == "CONFIRMED" and extracted:
+                field_summary.append(f"{fk}: {extracted[:100]}")
+
+    da_instruction = ""
+    if tier == "CONSEQUENTIAL":
+        da_instruction = (
+            "\nDevil's Advocate: For each assumption, briefly argue WHY it might be wrong. "
+            "Push back on the most confident claims."
+        )
+    elif tier == "STANDARD":
+        da_instruction = "\nInclude at least one assumption that challenges the scope or success criteria."
+
+    prompt = f"""Generate {max_count} falsifiable assumptions for this DRAFT session.
+
+Intent: {intent[:300]}
+
+Confirmed fields:
+{chr(10).join(field_summary[:15])}
+
+Rules:
+- Each assumption must be a specific, testable claim (not a restatement of confirmed fields).
+- Each must have a clear falsifier: what evidence would prove it wrong?
+- Focus on GENUINE RISKS: wrong scope, missing dependencies, unstated constraints, incorrect success criteria.
+- Do NOT just restate what was confirmed. Challenge it.{da_instruction}"""
+
+    assumptions = []
+    for _i in range(max_count):
+        result = _llm_call(prompt, _ASSUMPTION_SCHEMA, timeout=20)
+        if result and result.get("claim"):
+            assumptions.append({
+                "claim": result["claim"],
+                "source": "llm_adversarial",
+                "falsifier": result.get("falsifier", f"If '{result['claim'][:80]}' is wrong, re-elicit."),
+                "impact": result.get("impact", ""),
+            })
+        if len(assumptions) >= max_count:
+            break
+
+    # If LLM didn't produce enough, supplement with heuristic
+    if len(assumptions) < max_count:
+        heuristic = _generate_heuristic_assumptions(dims, max_count - len(assumptions))
+        assumptions.extend(heuristic)
+
+    return assumptions[:max_count]
+
+
+def _generate_heuristic_assumptions(dims: dict, max_count: int) -> list[dict]:
+    """Generate assumptions from field extractions (fallback)."""
     assumptions = []
 
     for dim_key, fields in dims.items():
         if isinstance(fields, dict) and fields.get("_screened"):
-            assumptions.append(
-                {
-                    "claim": f"Dimension {dim_key} ({DIMENSION_NAMES.get(dim_key, '')}) is not applicable.",
-                    "source": "screening",
-                    "falsifier": (
-                        f"If this task involves {DIMENSION_NAMES.get(dim_key, '').lower()}, screening was wrong."
-                    ),
-                }
-            )
+            assumptions.append({
+                "claim": f"Dimension {dim_key} ({DIMENSION_NAMES.get(dim_key, '')}) is not applicable.",
+                "source": "screening",
+                "falsifier": (
+                    f"If this task involves {DIMENSION_NAMES.get(dim_key, '').lower()}, screening was wrong."
+                ),
+            })
             continue
         for field_key, info in fields.items():
             if field_key.startswith("_"):
                 continue
             if info.get("status") == "SATISFIED" and info.get("extracted"):
-                assumptions.append(
-                    {
-                        "claim": f"For {field_key}: {info['extracted']}",
-                        "source": "context_extraction",
-                        "confidence": info.get("confidence", 0.5),
-                        "falsifier": f"If wrong, re-elicit {field_key}.",
-                    }
-                )
+                assumptions.append({
+                    "claim": f"For {field_key}: {info['extracted']}",
+                    "source": "context_extraction",
+                    "confidence": info.get("confidence", 0.5),
+                    "falsifier": f"If wrong, re-elicit {field_key}.",
+                })
 
-    assumptions = assumptions[:5]
-    storage.update_session(session_id, assumptions=assumptions)
-    storage.log_audit(session_id, "draft_assumptions", "generated", f"{len(assumptions)} assumptions")
-    return assumptions
+    return assumptions[:max_count]
 
 
 # ── Gate ──────────────────────────────────────────────────
+
+_PERFUNCTORY_PATTERNS = {"yes", "agreed", "as stated", "correct", "confirmed", "ok", "okay", "sure", "yep", "ack"}
+
+
+def _detect_perfunctory(dims: dict) -> list[str]:
+    """Detect perfunctory confirmation patterns (DFT-08).
+
+    Flags but doesn't block — adds warnings to gate results.
+    """
+    warnings = []
+    values = []
+
+    for _dim_key, fields in dims.items():
+        if isinstance(fields, dict) and fields.get("_screened"):
+            continue
+        for fk, info in fields.items():
+            if fk.startswith("_") or not isinstance(info, dict):
+                continue
+            if info.get("status") == "CONFIRMED":
+                val = str(info.get("extracted", "")).strip().lower()
+                values.append((fk, val))
+
+    # Check for repeated identical values across fields
+    value_counts: dict[str, list[str]] = {}
+    for fk, val in values:
+        value_counts.setdefault(val, []).append(fk)
+    for val, fks in value_counts.items():
+        if len(fks) > 1 and val:
+            warnings.append(f"Repeated value '{val[:30]}' across fields: {', '.join(fks)}")
+
+    # Check for known perfunctory patterns
+    for fk, val in values:
+        if val in _PERFUNCTORY_PATTERNS:
+            warnings.append(f"{fk}: perfunctory confirmation ('{val}')")
+
+    return warnings
 
 
 def check_gate(session_id: str) -> dict:
@@ -583,6 +727,9 @@ def check_gate(session_id: str) -> dict:
     if unverified:
         blockers.append(f"{len(unverified)} unverified assumption(s)")
 
+    # Perfunctory confirmation detection (DFT-08) — warn, don't block
+    perfunctory_warnings = _detect_perfunctory(dims)
+
     passed = len(blockers) == 0
     if passed:
         storage.update_session(session_id, gate_passed=1)
@@ -596,6 +743,9 @@ def check_gate(session_id: str) -> dict:
         "blockers": blockers,
         "summary": f"{'[PASS]' if passed else '[BLOCKED]'}: {confirmed}/{total}",
     }
+
+    if perfunctory_warnings:
+        result["warnings"] = perfunctory_warnings
 
     # M1.5: Context enrichment — compliant agents get rich context for free
     if passed:
@@ -779,6 +929,192 @@ def verify_assumption(session_id: str, index: int, verified: bool, note: str = "
     return {"result": action}
 
 
+# ── Batch Operations ──────────────────────────────────────
+
+
+def confirm_batch(session_id: str, fields: dict) -> dict:
+    """Confirm multiple DRAFT fields in a single call.
+
+    Args:
+        session_id: Active session ID.
+        fields: Dict of {field_key: value} pairs to confirm.
+
+    Returns dict with confirmed/rejected/errors counts and per-field results.
+    """
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+    session = storage.get_session(session_id)
+    if not session:
+        return {"error": "Session not found"}
+
+    if not fields or not isinstance(fields, dict):
+        return {"error": "fields must be a non-empty dict of {field_key: value} pairs"}
+
+    results = {}
+    confirmed = 0
+    rejected = 0
+    errors = 0
+
+    dims = session.get("dimensions", {})
+
+    for field_key, value in fields.items():
+        fk = str(field_key).strip().upper()
+
+        # Validate value
+        if not value or not str(value).strip():
+            results[fk] = {"status": "REJECTED", "reason": "Empty value"}
+            storage.log_audit(session_id, "confirm_batch", f"{fk} REJECTED", "Empty value")
+            rejected += 1
+            continue
+
+        stripped = str(value).strip()
+        if len(stripped) < 3:
+            results[fk] = {"status": "REJECTED", "reason": f"Too short ({len(stripped)} chars)"}
+            storage.log_audit(session_id, "confirm_batch", f"{fk} REJECTED", f"Too short: '{stripped}'")
+            rejected += 1
+            continue
+
+        # Validate dimension exists and not screened
+        dim_key = fk[0]
+        if dim_key not in dims:
+            results[fk] = {"status": "ERROR", "reason": f"Dimension {dim_key} not mapped"}
+            errors += 1
+            continue
+        if isinstance(dims[dim_key], dict) and dims[dim_key].get("_screened"):
+            results[fk] = {"status": "ERROR", "reason": f"Dimension {dim_key} screened"}
+            errors += 1
+            continue
+
+        # Confirm the field
+        dims[dim_key][fk] = {
+            "question": DRAFT_FIELDS.get(dim_key, {}).get(fk, ""),
+            "status": "CONFIRMED",
+            "extracted": stripped,
+            "confidence": 1.0,
+            "confirmed_by": "human",
+        }
+        results[fk] = {"status": "CONFIRMED", "value": stripped}
+        confirmed += 1
+
+    # Single DB write for all changes
+    storage.update_session(session_id, dimensions=dims)
+    storage.log_audit(
+        session_id,
+        "confirm_batch",
+        f"{confirmed} confirmed, {rejected} rejected, {errors} errors",
+        f"Fields: {list(fields.keys())}",
+    )
+
+    return {
+        "session_id": session_id,
+        "confirmed": confirmed,
+        "rejected": rejected,
+        "errors": errors,
+        "total": len(fields),
+        "results": results,
+    }
+
+
+def quick_confirm_satisfied(session_id: str) -> dict:
+    """Confirm all SATISFIED (pre-extracted) fields in one call.
+
+    Promotes SATISFIED fields with substantive extracted content to CONFIRMED.
+    MISSING/AMBIGUOUS fields are untouched.
+    """
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+    session = storage.get_session(session_id)
+    if not session:
+        return {"error": "Session not found"}
+
+    dims = session.get("dimensions", {})
+    promoted = []
+
+    for _dim_key, dim_fields in dims.items():
+        if not isinstance(dim_fields, dict) or dim_fields.get("_screened"):
+            continue
+        for fk, info in dim_fields.items():
+            if fk.startswith("_") or not isinstance(info, dict):
+                continue
+            if info.get("status") == "SATISFIED" and info.get("extracted") and len(str(info["extracted"]).strip()) >= 3:
+                info["status"] = "CONFIRMED"
+                info["confirmed_by"] = "human_quick_confirm"
+                promoted.append(fk)
+
+    if promoted:
+        storage.update_session(session_id, dimensions=dims)
+        storage.log_audit(session_id, "quick_confirm", f"{len(promoted)} fields promoted", f"Fields: {promoted}")
+
+    return {
+        "session_id": session_id,
+        "promoted_count": len(promoted),
+        "promoted_fields": promoted,
+        "note": (
+            "SATISFIED fields promoted to CONFIRMED. MISSING/AMBIGUOUS still need individual confirmation."
+            if promoted
+            else "No SATISFIED fields to promote. Use confirm_field or confirm_batch for remaining fields."
+        ),
+    }
+
+
+def verify_batch(session_id: str, verifications: dict) -> dict:
+    """Verify multiple assumptions in a single call.
+
+    Args:
+        session_id: Active session ID.
+        verifications: Dict of {index: bool} pairs.
+
+    Returns dict with verified/rejected counts and per-assumption results.
+    """
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+    session = storage.get_session(session_id)
+    if not session:
+        return {"error": "Session not found"}
+
+    if not verifications or not isinstance(verifications, dict):
+        return {"error": "verifications must be a non-empty dict of {index: bool} pairs"}
+
+    assumptions = session.get("assumptions", [])
+    results = {}
+    verified_count = 0
+    rejected_count = 0
+
+    for idx_str, verified in verifications.items():
+        idx = int(idx_str)
+        if idx < 0 or idx >= len(assumptions):
+            results[str(idx)] = {"status": "ERROR", "reason": f"Index {idx} out of range (0-{len(assumptions) - 1})"}
+            continue
+
+        assumptions[idx]["verified"] = bool(verified)
+        if verified:
+            results[str(idx)] = {"status": "VERIFIED", "claim": assumptions[idx].get("claim", "")[:100]}
+            verified_count += 1
+        else:
+            results[str(idx)] = {"status": "REJECTED", "claim": assumptions[idx].get("claim", "")[:100]}
+            rejected_count += 1
+
+    storage.update_session(session_id, assumptions=assumptions)
+    storage.log_audit(
+        session_id,
+        "verify_batch",
+        f"{verified_count} verified, {rejected_count} rejected",
+        f"Indices: {list(verifications.keys())}",
+    )
+
+    return {
+        "session_id": session_id,
+        "verified": verified_count,
+        "rejected": rejected_count,
+        "total": len(verifications),
+        "results": results,
+        "note": "Rejected assumptions may require re-elicitation of affected fields." if rejected_count else "",
+    }
+
+
 def elicitation_review(session_id: str) -> dict:
     """Self-assessment of elicitation quality."""
     # M1.3: Closed session guard
@@ -831,4 +1167,95 @@ def elicitation_review(session_id: str) -> dict:
     if _embed_available():
         features.append("embedding_assessment")
 
-    return {"quality": quality, "findings": findings, "features": features}
+    # Session analytics (FLOW-1.0)
+    analytics = _session_analytics(session)
+
+    return {"quality": quality, "findings": findings, "features": features, "analytics": analytics}
+
+
+def _session_analytics(session: dict) -> dict:
+    """Compute session-level metrics for quality review."""
+    dims = session.get("dimensions", {})
+    assumptions = session.get("assumptions", [])
+
+    # Confidence distribution
+    confidences = []
+    confirmed_count = 0
+    total_fields = 0
+    for _dk, fields in dims.items():
+        if isinstance(fields, dict) and fields.get("_screened"):
+            continue
+        for fk, info in fields.items():
+            if fk.startswith("_") or not isinstance(info, dict):
+                continue
+            total_fields += 1
+            conf = info.get("confidence", 0.0)
+            confidences.append(conf)
+            if info.get("status") == "CONFIRMED":
+                confirmed_count += 1
+
+    # Assumption rejection rate
+    total_assumptions = len(assumptions)
+    rejected_assumptions = sum(1 for a in assumptions if a.get("verified") is False)
+
+    avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+    low_confidence_count = sum(1 for c in confidences if c < 0.5)
+
+    return {
+        "total_fields": total_fields,
+        "confirmed_fields": confirmed_count,
+        "average_confidence": round(avg_confidence, 3),
+        "low_confidence_fields": low_confidence_count,
+        "assumption_count": total_assumptions,
+        "assumption_rejection_rate": round(rejected_assumptions / total_assumptions, 2) if total_assumptions else 0.0,
+        "tier": session.get("tier", "UNKNOWN"),
+    }
+
+_TIER_ORDER = ["CASUAL", "STANDARD", "CONSEQUENTIAL"]
+
+
+def escalate_tier(session_id: str, reason: str) -> dict:
+    """Manually escalate session tier. Casual → Standard → Consequential."""
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+    session = storage.get_session(session_id)
+    if not session:
+        return {"error": "Session not found"}
+    if not reason or not reason.strip():
+        return {"error": "Reason mandatory."}
+
+    current_idx = _TIER_ORDER.index(session["tier"]) if session["tier"] in _TIER_ORDER else 0
+    if current_idx >= 2:
+        return {"tier": "CONSEQUENTIAL", "note": "Already at maximum tier."}
+
+    new_tier = _TIER_ORDER[current_idx + 1]
+    storage.update_session(session_id, tier=new_tier)
+    storage.log_audit(session_id, "escalate", f"{session['tier']} -> {new_tier}", reason)
+    return {"previous_tier": session["tier"], "new_tier": new_tier, "reason": reason}
+
+
+def deescalate_tier(session_id: str, reason: str) -> dict:
+    """Manually de-escalate session tier (authorized override). Logged but honored."""
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+    session = storage.get_session(session_id)
+    if not session:
+        return {"error": "Session not found"}
+    if not reason or not reason.strip():
+        return {"error": "Reason mandatory."}
+
+    current_idx = _TIER_ORDER.index(session["tier"]) if session["tier"] in _TIER_ORDER else 2
+    if current_idx <= 0:
+        return {"tier": "CASUAL", "note": "Already at minimum tier."}
+
+    new_tier = _TIER_ORDER[current_idx - 1]
+    storage.update_session(session_id, tier=new_tier)
+    storage.log_audit(session_id, "deescalate", f"{session['tier']} -> {new_tier}", f"AUTHORIZED: {reason}")
+    return {
+        "previous_tier": session["tier"],
+        "new_tier": new_tier,
+        "reason": reason,
+        "note": "De-escalation honored and logged. DRAFT mapping still occurs internally.",
+    }

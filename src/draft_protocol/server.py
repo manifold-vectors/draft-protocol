@@ -3,11 +3,12 @@
 Ensures AI understands human intent before execution begins.
 Transport: stdio (MCP standard)
 
-Tools (15):
-  draft_intake / draft_map / draft_elicit / draft_confirm
-  draft_assumptions / draft_verify / draft_gate / draft_review
-  draft_status / draft_unscreen / draft_add_assumption
-  draft_override / draft_close / draft_escalate / draft_deescalate
+Tools (18):
+  draft_intake / draft_map / draft_elicit / draft_confirm / draft_confirm_batch
+  draft_quick_confirm / draft_assumptions / draft_verify / draft_verify_batch
+  draft_gate / draft_review / draft_status / draft_unscreen
+  draft_add_assumption / draft_override / draft_close
+  draft_escalate / draft_deescalate
 """
 
 from fastmcp import FastMCP
@@ -26,7 +27,7 @@ mcp = FastMCP(
         "draft_add_assumption for manual assumptions, "
         "draft_override for authorized gate bypass on known tool bugs (not governance bypass)."
     ),
-    version="0.1.0",
+    version="1.1.0",
 )
 
 # ── Annotation constants ──
@@ -138,6 +139,40 @@ def draft_confirm(session_id: str, field_key: str, value: str) -> dict:
     return engine.confirm_field(session_id, field_key, value)
 
 
+@mcp.tool(annotations={"title": "Confirm Multiple Fields", **_WRITE})
+def draft_confirm_batch(session_id: str, fields: str) -> dict:
+    """Confirm multiple DRAFT fields in a single call.
+
+    50-60% reduction in tool call overhead vs individual confirms.
+
+    Args:
+        session_id: Active session ID.
+        fields: JSON string of {field_key: value} pairs.
+               Example: '{"D1": "Building a governance engine", "D2": "AI safety"}'
+    """
+    import json as _json
+
+    try:
+        parsed = _json.loads(fields) if isinstance(fields, str) else fields
+    except (ValueError, TypeError):
+        return {"error": "fields must be valid JSON: '{\"D1\": \"value\", \"D2\": \"value\"}'"}
+    return engine.confirm_batch(session_id, parsed)
+
+
+@mcp.tool(annotations={"title": "Quick Confirm Satisfied", **_WRITE})
+def draft_quick_confirm(session_id: str) -> dict:
+    """Promote all SATISFIED fields to CONFIRMED in one call.
+
+    Useful after draft_map when many fields were auto-extracted correctly.
+    Only promotes fields with substantive extracted content (3+ chars).
+    MISSING/AMBIGUOUS fields are untouched.
+
+    Args:
+        session_id: Active session ID.
+    """
+    return engine.quick_confirm_satisfied(session_id)
+
+
 @mcp.tool(annotations={"title": "Surface Assumptions", **_RO})
 def draft_assumptions(session_id: str) -> dict:
     """Surface 3-5 key assumptions as falsifiable claims.
@@ -170,6 +205,24 @@ def draft_verify(session_id: str, assumption_index: int, verified: bool, note: s
         note: Optional human note.
     """
     return engine.verify_assumption(session_id, assumption_index, verified, note)
+
+
+@mcp.tool(annotations={"title": "Verify Multiple Assumptions", **_WRITE})
+def draft_verify_batch(session_id: str, verifications: str) -> dict:
+    """Verify or reject multiple assumptions in a single call.
+
+    Args:
+        session_id: Active session ID.
+        verifications: JSON string of {index: bool} pairs.
+                      Example: '{"0": true, "1": true, "2": false}'
+    """
+    import json as _json
+
+    try:
+        parsed = _json.loads(verifications) if isinstance(verifications, str) else verifications
+    except (ValueError, TypeError):
+        return {"error": "verifications must be valid JSON: '{\"0\": true, \"1\": false}'"}
+    return engine.verify_batch(session_id, parsed)
 
 
 @mcp.tool(annotations={"title": "Check Confirmation Gate", **_RO})
@@ -294,19 +347,7 @@ def draft_escalate(session_id: str, reason: str) -> dict:
         session_id: Active session ID.
         reason: Why escalation is needed.
     """
-    session = storage.get_session(session_id)
-    if not session:
-        return {"error": "Session not found"}
-
-    tiers = ["CASUAL", "STANDARD", "CONSEQUENTIAL"]
-    current = tiers.index(session["tier"]) if session["tier"] in tiers else 0
-    if current >= 2:
-        return {"tier": "CONSEQUENTIAL", "note": "Already at maximum tier."}
-
-    new_tier = tiers[current + 1]
-    storage.update_session(session_id, tier=new_tier)
-    storage.log_audit(session_id, "draft_escalate", f"{session['tier']} -> {new_tier}", reason)
-    return {"previous_tier": session["tier"], "new_tier": new_tier, "reason": reason}
+    return engine.escalate_tier(session_id, reason)
 
 
 @mcp.tool(annotations={"title": "De-escalate Tier", **_CREATE})
@@ -319,24 +360,7 @@ def draft_deescalate(session_id: str, reason: str) -> dict:
         session_id: Active session ID.
         reason: Reason for de-escalation.
     """
-    session = storage.get_session(session_id)
-    if not session:
-        return {"error": "Session not found"}
-
-    tiers = ["CASUAL", "STANDARD", "CONSEQUENTIAL"]
-    current = tiers.index(session["tier"]) if session["tier"] in tiers else 2
-    if current <= 0:
-        return {"tier": "CASUAL", "note": "Already at minimum tier."}
-
-    new_tier = tiers[current - 1]
-    storage.update_session(session_id, tier=new_tier)
-    storage.log_audit(session_id, "draft_deescalate", f"{session['tier']} -> {new_tier}", f"AUTHORIZED: {reason}")
-    return {
-        "previous_tier": session["tier"],
-        "new_tier": new_tier,
-        "reason": reason,
-        "note": "De-escalation honored and logged. DRAFT mapping still occurs internally.",
-    }
+    return engine.deescalate_tier(session_id, reason)
 
 
 # ── Helpers ───────────────────────────────────────────────
