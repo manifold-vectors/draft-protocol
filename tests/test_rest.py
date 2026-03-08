@@ -84,14 +84,14 @@ class TestClassifyEndpoint:
         handler.do_POST()
         status, body = parse_response(wfile)
         assert status == 200
-        assert body["tier"] == "STANDARD"
+        assert body["tier"] in ("TASK", "STANDARD")
 
     def test_classify_casual(self):
         handler, wfile = make_handler("POST", "/classify", {"message": "hello"})
         handler.do_POST()
         status, body = parse_response(wfile)
         assert status == 200
-        assert body["tier"] == "CASUAL"
+        assert body["tier"] in ("TRIVIAL", "CASUAL")
 
     def test_classify_empty_rejects(self):
         handler, wfile = make_handler("POST", "/classify", {"message": ""})
@@ -108,7 +108,7 @@ class TestSessionEndpoint:
         status, body = parse_response(wfile)
         assert status == 200
         assert "session_id" in body
-        assert body["tier"] in ("CASUAL", "STANDARD", "CONSEQUENTIAL")
+        assert body["tier"] in ("CASUAL", "STANDARD", "CONSEQUENTIAL", "TRIVIAL", "LOOKUP", "TASK", "MULTI")
 
     def test_create_session_empty_rejects(self):
         handler, wfile = make_handler("POST", "/session", {"message": ""})

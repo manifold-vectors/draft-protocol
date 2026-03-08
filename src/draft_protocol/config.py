@@ -29,6 +29,62 @@ if LLM_PROVIDER == "none" and LLM_MODEL:
     elif LLM_MODEL:
         LLM_PROVIDER = "ollama"  # Default to Ollama for unknown models
 
+# ── 5-Tier Classification (GDE v1 port) ───────────────────
+# Priority: T4 > T3 > T2 > T1 > T0 (highest risk wins)
+
+ALL_TIERS = ("TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL")
+
+TIER_RISK = {
+    "TRIVIAL": 0.0,
+    "LOOKUP": 0.1,
+    "TASK": 0.3,
+    "MULTI": 0.6,
+    "CONSEQUENTIAL": 0.9,
+}
+
+# Legacy tier mapping (backward compat)
+LEGACY_MAP = {
+    "CASUAL": "TRIVIAL",
+    "STANDARD": "TASK",
+    "CONSEQUENTIAL": "CONSEQUENTIAL",
+}
+
+# Reverse: new tier → legacy name (for systems expecting old names)
+TIER_TO_LEGACY = {
+    "TRIVIAL": "CASUAL",
+    "LOOKUP": "CASUAL",
+    "TASK": "STANDARD",
+    "MULTI": "STANDARD",
+    "CONSEQUENTIAL": "CONSEQUENTIAL",
+}
+
+# Per-tier DRAFT ceremony depth
+TIER_CEREMONY = {
+    "TRIVIAL": "invisible",      # No output — internal only
+    "LOOKUP": "tag",             # One-line classification tag
+    "TASK": "semi_visible",      # Summary line + quick_confirm path
+    "MULTI": "visible",          # Visible mapping + targeted elicitation (D+T min)
+    "CONSEQUENTIAL": "full",     # Full 7-step, DA, review mandatory
+}
+
+# Per-tier assumption counts
+TIER_ASSUMPTIONS = {
+    "TRIVIAL": 0,
+    "LOOKUP": 1,
+    "TASK": 2,
+    "MULTI": 3,
+    "CONSEQUENTIAL": 5,
+}
+
+# Per-tier Guardian rule sets
+TIER_GUARDIAN_RULES = {
+    "TRIVIAL": ["G1", "G3"],
+    "LOOKUP": ["G1", "G3"],
+    "TASK": ["G1", "G2", "G3", "G4", "G5", "G6", "G8"],
+    "MULTI": ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8"],
+    "CONSEQUENTIAL": ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8"],
+}
+
 # ── Tier Classification Triggers ──────────────────────────
 # Keyword-based fast path. LLM classification (if available) handles ambiguous cases.
 
@@ -53,6 +109,21 @@ CONSEQUENTIAL_TRIGGERS = [
     "production deployment",
     "security policy",
     "auth modification",
+    # Security: extraction-pattern triggers (OWASP LLM07) — always T4
+    "ignore previous instructions",
+    "ignore all previous",
+    "ignore above",
+    "repeat above",
+    "repeat everything",
+    "verbatim",
+    "system prompt",
+    "print environment",
+    "environment variables",
+    "show me your instructions",
+    "what are your rules",
+    "dump your config",
+    "reveal your prompt",
+    "debug mode",
 ]
 
 STANDARD_TRIGGERS = [
@@ -76,22 +147,55 @@ STANDARD_TRIGGERS = [
     "proposal",
     "pipeline",
     "workflow",
-    # Security: extraction-pattern triggers (OWASP LLM07)
-    "ignore previous instructions",
-    "ignore all previous",
-    "ignore above",
-    "repeat above",
-    "repeat everything",
-    "verbatim",
-    "system prompt",
-    "print environment",
-    "environment variables",
-    "show me your instructions",
-    "what are your rules",
-    "dump your config",
-    "reveal your prompt",
-    "debug mode",
 ]
+
+MULTI_TRIGGERS = [
+    "docker-compose",
+    "docker compose",
+    ".env",
+    "scheduled task",
+    "cron",
+    "qdrant",
+    "postgresql",
+    "postgres",
+    "sync",
+    "migrate",
+    "refactor",
+    "sweep",
+    "consolidate",
+    "rename",
+    "restructure",
+    "reorg",
+    "batch",
+    "across multiple",
+    "several files",
+    "cross-service",
+]
+
+LOOKUP_TRIGGERS = [
+    "what is",
+    "what are",
+    "check",
+    "status",
+    "how does",
+    "where is",
+    "which",
+    "show me",
+    "list",
+    "describe",
+    "explain",
+    "verify",
+    "look up",
+    "find",
+]
+
+TRIVIAL_PATTERNS = {
+    "yes", "no", "done", "ok", "okay", "sure", "thanks",
+    "thank you", "continue", "proceed", "go", "next",
+    "hi", "hello", "hey", "good morning", "good evening",
+    "bye", "goodbye", "got it", "noted", "roger",
+    "yep", "nope", "ack", "k", "y", "n",
+}
 
 # ── Dimensions ────────────────────────────────────────────
 # D and T are mandatory; R, A, F can be screened out when inapplicable.

@@ -134,16 +134,16 @@ class TestInputValidation:
         """Very long messages should not crash."""
         long_msg = "build a tool " * 5000
         tier, _, conf = classify_tier(long_msg)
-        assert tier in ("CASUAL", "STANDARD", "CONSEQUENTIAL")
+        assert tier in ("TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL")
         assert 0.0 <= conf <= 1.0
 
     def test_classify_unicode(self):
         tier, _, _ = classify_tier("构建一个数据处理工具")
-        assert tier in ("CASUAL", "STANDARD", "CONSEQUENTIAL")
+        assert tier in ("TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL")
 
     def test_classify_special_characters(self):
         tier, _, _ = classify_tier("build a tool!@#$%^&*(){}[]|\\")
-        assert tier in ("CASUAL", "STANDARD", "CONSEQUENTIAL")
+        assert tier in ("TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL")
 
     def test_map_with_html_injection(self):
         """HTML/script tags in context should not cause issues."""

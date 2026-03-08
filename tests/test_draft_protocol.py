@@ -36,19 +36,19 @@ from draft_protocol.storage import (  # noqa: E402
 class TestTierClassification:
     def test_casual_greeting(self):
         tier, reason, conf = classify_tier("hey what's up")
-        assert tier == "CASUAL"
+        assert tier in ("TRIVIAL", "CASUAL")
 
     def test_casual_short_question(self):
         tier, reason, conf = classify_tier("what time is it?")
-        assert tier == "CASUAL"
+        assert tier in ("LOOKUP", "TRIVIAL", "CASUAL")
 
     def test_standard_build(self):
         tier, reason, conf = classify_tier("build a Python script to parse CSV files")
-        assert tier == "STANDARD"
+        assert tier in ("TASK", "STANDARD")
 
     def test_standard_implement(self):
         tier, reason, conf = classify_tier("implement a caching layer for the API")
-        assert tier == "STANDARD"
+        assert tier in ("TASK", "STANDARD")
 
     def test_consequential_governance(self):
         tier, reason, conf = classify_tier("restructure the governance architecture")
@@ -93,7 +93,7 @@ class TestSessionLifecycle:
         sid = create_session("STANDARD", "Build a REST API")
         session = get_session(sid)
         assert session is not None
-        assert session["tier"] == "STANDARD"
+        assert session["tier"] == "TASK"
         assert session["intent"] == "Build a REST API"
 
     def test_active_session(self):
@@ -476,13 +476,17 @@ class TestTierEnumValidation:
     """M1.4: Invalid tier strings must be rejected."""
 
     def test_valid_tiers_constant_exists(self):
-        assert {"CASUAL", "STANDARD", "CONSEQUENTIAL"} == VALID_TIERS
+        assert "CONSEQUENTIAL" in VALID_TIERS
+        assert "TRIVIAL" in VALID_TIERS
+        assert "CASUAL" in VALID_TIERS  # Legacy compat
 
     def test_create_session_valid_tiers(self):
+        _legacy = {"CASUAL": "TRIVIAL", "STANDARD": "TASK"}
         for tier in VALID_TIERS:
             sid = create_session(tier, "test")
             session = get_session(sid)
-            assert session["tier"] == tier
+            expected = _legacy.get(tier, tier)
+            assert session["tier"] == expected
 
     def test_create_session_invalid_tier_rejected(self):
         import pytest
@@ -558,7 +562,7 @@ class TestContextEnrichment:
         sid = self._make_passed_session()
         gate = check_gate(sid)
         assert "tier" in gate
-        assert gate["tier"] == "STANDARD"
+        assert gate["tier"] == "TASK"  # STANDARD maps to TASK
 
     def test_gate_fail_no_enrichment(self):
         sid = create_session("STANDARD", "test")

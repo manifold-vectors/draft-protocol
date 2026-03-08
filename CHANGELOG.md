@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-03-08
+
+### Added
+- **5-Tier Classification** — TRIVIAL, LOOKUP, TASK, MULTI, CONSEQUENTIAL replace the 3-tier CASUAL/STANDARD/CONSEQUENTIAL system. Finer-grained governance matching actual task complexity.
+- **Open Elicitation Phase** — `open_elicitation()` adds unstructured intent gathering (Cognitive Interview) before dimension mapping for TASK+ tiers. Prevents anchoring bias.
+- **Assumption Quality Scoring** — `score_assumptions()` rates each assumption on falsifiability, impact, and novelty (0-1 each). Low-quality assumptions flagged for replacement.
+- **Ceremony Depth** — `get_ceremony_depth()` returns tier-appropriate governance visibility: invisible (TRIVIAL), tag (LOOKUP), semi_visible (TASK), visible (MULTI), full (CONSEQUENTIAL).
+- **Legacy Tier Compatibility** — CASUAL/STANDARD/CONSEQUENTIAL still accepted, auto-mapped to new tiers. `resolve_tier_override()` and `get_legacy_tier()` for bidirectional mapping.
+- **MCP Tool: `draft_open_elicit`** — open elicitation as a dedicated tool for TASK+ sessions.
+- 57 new tests covering 5-tier classification, open elicitation, ceremony depth, legacy compat, assumption scoring. Total suite: 197 tests.
+
+### Changed
+- Tier classification engine now uses 5-tier keyword sets with priority ordering (T4 > T3 > T2 > T1 > T0)
+- Extraction attack patterns moved from STANDARD_TRIGGERS to CONSEQUENTIAL_TRIGGERS (security fix)
+- `create_session()` auto-maps legacy tier names to 5-tier equivalents
+- Assumption count scales across 5 tiers: 0 (TRIVIAL), 1 (LOOKUP), 2 (TASK), 3 (MULTI), 5 (CONSEQUENTIAL)
+
 ## [1.1.0] - 2026-03-07
 
 ### Added
@@ -90,7 +107,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AGENTS.md, RULES.md, STRUCTURE.md for AI agent compatibility
 - Professional repo infrastructure: CONTRIBUTING, SECURITY, CODE_OF_CONDUCT
 
-[Unreleased]: https://github.com/manifold-vectors/draft-protocol/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/manifold-vectors/draft-protocol/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/manifold-vectors/draft-protocol/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/manifold-vectors/draft-protocol/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/manifold-vectors/draft-protocol/compare/v0.1.1...v1.0.0
 [0.1.1]: https://github.com/manifold-vectors/draft-protocol/compare/v0.1.0...v0.1.1

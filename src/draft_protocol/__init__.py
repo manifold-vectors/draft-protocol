@@ -13,7 +13,7 @@ Usage:
     from draft_protocol.providers import llm_available, embed_available
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 # Public API — importable from `draft_protocol` directly
 from draft_protocol.engine import (
@@ -27,9 +27,14 @@ from draft_protocol.engine import (
     escalate_tier,
     generate_assumptions,
     generate_elicitation,
+    get_ceremony_depth,
+    get_legacy_tier,
     map_dimensions,
+    open_elicitation,
     override_gate,
     quick_confirm_satisfied,
+    resolve_tier_override,
+    score_assumptions,
     unscreen_dimension,
     verify_assumption,
     verify_batch,
@@ -49,9 +54,14 @@ __all__ = [
     "__version__",
     # Engine
     "classify_tier",
+    "resolve_tier_override",
+    "get_legacy_tier",
+    "get_ceremony_depth",
     "map_dimensions",
     "generate_elicitation",
+    "open_elicitation",
     "generate_assumptions",
+    "score_assumptions",
     "check_gate",
     "confirm_field",
     "confirm_batch",

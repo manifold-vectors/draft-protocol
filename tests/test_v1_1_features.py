@@ -247,13 +247,13 @@ class TestEscalation:
     def test_escalate_casual_to_standard(self):
         sid = storage.create_session("CASUAL", "hello")
         result = engine.escalate_tier(sid, "Scope expanded")
-        assert result["previous_tier"] == "CASUAL"
-        assert result["new_tier"] == "STANDARD"
+        assert result["previous_tier"] == "TRIVIAL"
+        assert result["new_tier"] == "LOOKUP"
 
     def test_escalate_standard_to_consequential(self):
         sid = storage.create_session("STANDARD", "build something")
         result = engine.escalate_tier(sid, "Touching governance")
-        assert result["new_tier"] == "CONSEQUENTIAL"
+        assert result["new_tier"] == "MULTI"
 
     def test_escalate_at_max_noop(self):
         sid = storage.create_session("CONSEQUENTIAL", "restructure governance")
@@ -269,12 +269,12 @@ class TestEscalation:
     def test_deescalate_consequential_to_standard(self):
         sid = storage.create_session("CONSEQUENTIAL", "big task")
         result = engine.deescalate_tier(sid, "Scope reduced")
-        assert result["new_tier"] == "STANDARD"
+        assert result["new_tier"] == "MULTI"
 
     def test_deescalate_at_min_noop(self):
         sid = storage.create_session("CASUAL", "hi")
         result = engine.deescalate_tier(sid, "test")
-        assert result["tier"] == "CASUAL"
+        assert result["tier"] == "TRIVIAL"
 
     def test_deescalate_empty_reason_rejected(self):
         sid = storage.create_session("STANDARD", "task")
@@ -368,7 +368,7 @@ class TestAssumptionTierScaling:
         sid = storage.create_session("CASUAL", "hello")
         engine.map_dimensions(sid, "Simple greeting, just saying hello to test the system")
         assumptions = engine.generate_assumptions(sid)
-        assert len(assumptions) <= 2
+        assert len(assumptions) == 0  # TRIVIAL tier gets 0 assumptions
 
     def test_standard_moderate_assumptions(self):
         sid = _create_mapped_session()

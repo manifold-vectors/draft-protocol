@@ -18,12 +18,20 @@ import math
 
 from draft_protocol import providers, storage
 from draft_protocol.config import (
+    ALL_TIERS,
     CONSEQUENTIAL_TRIGGERS,
     DIMENSION_NAMES,
     DIMENSION_SCREEN_QUESTIONS,
     DRAFT_FIELDS,
+    LEGACY_MAP,
+    LOOKUP_TRIGGERS,
     MANDATORY_DIMENSIONS,
+    MULTI_TRIGGERS,
     STANDARD_TRIGGERS,
+    TIER_ASSUMPTIONS,
+    TIER_CEREMONY,
+    TIER_TO_LEGACY,
+    TRIVIAL_PATTERNS,
 )
 
 # ── M1.3: Closed Session Guard ───────────────────────────
@@ -43,7 +51,10 @@ def _check_open(session_id: str) -> dict | None:
 TIER_SCHEMA = {
     "type": "object",
     "properties": {
-        "tier": {"type": "string", "enum": ["CASUAL", "STANDARD", "CONSEQUENTIAL"]},
+        "tier": {"type": "string", "enum": [
+            "TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL",
+            "CASUAL", "STANDARD",  # Legacy compat
+        ]},
         "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
         "reasoning": {"type": "string"},
     },
@@ -122,46 +133,102 @@ def _llm_call(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
 
 
 def classify_tier(message: str) -> tuple[str, str, float]:
-    """Classify message into CASUAL / STANDARD / CONSEQUENTIAL.
+    """Classify message into 5 governance tiers (GDE v1 port).
 
+    Priority: T4 CONSEQUENTIAL > T3 MULTI > T2 TASK > T1 LOOKUP > T0 TRIVIAL.
     Returns (tier, reasoning, confidence).
-    Uses keyword fast-path first, then LLM if available and message is ambiguous.
+    Backward compatible: CASUAL/STANDARD still accepted as overrides.
     """
     message = str(message).strip() if message is not None else ""
     if not message:
         return "REJECTED", "Empty or whitespace-only message — cannot classify", 0.0
 
     lower = message.lower()
+    words = message.split()
+    word_count = len(words)
 
-    # Fast path: keyword check for consequential
+    # ── T4: CONSEQUENTIAL (governance, canonical, IP, security) ──
     matched = [t for t in CONSEQUENTIAL_TRIGGERS if t in lower]
     if matched:
-        return "CONSEQUENTIAL", f"Keyword match: {', '.join(matched[:3])}", 0.95
+        return "CONSEQUENTIAL", f"T4 keyword: {matched[0]}", 0.95
 
-    # Fast path: keyword check for standard
+    # ── T3: MULTI (infrastructure, cross-service, scope operations) ──
+    matched = [t for t in MULTI_TRIGGERS if t in lower]
+    if matched:
+        return "MULTI", f"T3 keyword: {matched[0]}", 0.85
+
+    # Multi-file/multi-system pattern detection
+    import re
+    multi_pattern = re.compile(
+        r"(?:\d+\s*(?:files?|changes?|modifications?))"
+        r"|(?:(?:across|multiple|several)\s+(?:files?|services?|systems?|collections?))",
+        re.IGNORECASE,
+    )
+    if multi_pattern.search(message):
+        return "MULTI", "Multi-file or cross-service operation detected", 0.80
+
+    # ── T2: TASK (single write/edit/create, standard work) ──
     matched = [t for t in STANDARD_TRIGGERS if t in lower]
     if matched:
-        return "STANDARD", f"Keyword match: {', '.join(matched[:3])}", 0.85
+        return "TASK", f"T2 keyword: {matched[0]}", 0.85
 
     # LLM semantic classification for ambiguous messages
-    if _llm_available() and len(message.split()) > 3:
+    if _llm_available() and word_count > 3:
         prompt = f"""Classify this user message for an AI governance system.
 
-CASUAL = simple questions, greetings, chat, quick lookups
-STANDARD = building, creating, implementing, designing, analyzing, modifying code/files/configs
-CONSEQUENTIAL = governance changes, architecture decisions, production deployments, security modifications
+TRIVIAL = greetings, thanks, "continue", acknowledgments (1-3 words, no action)
+LOOKUP = questions, status checks, reads, verifications
+TASK = single write/edit/create, building, implementing, modifying
+MULTI = multiple files/systems, infrastructure, migrations, cross-service
+CONSEQUENTIAL = governance changes, architecture, production, security, IP-sensitive
 
 Message: {message[:500]}"""
 
         result = _llm_call(prompt, TIER_SCHEMA, timeout=20)
-        if result and result.get("tier") in ("CASUAL", "STANDARD", "CONSEQUENTIAL"):
+        if result and result.get("tier") in ALL_TIERS:
             return result["tier"], result.get("reasoning", "LLM classification"), result.get("confidence", 0.7)
+        # Also accept legacy tier names from LLM
+        if result and result.get("tier") in LEGACY_MAP:
+            mapped = LEGACY_MAP[result["tier"]]
+            return mapped, result.get("reasoning", "LLM classification (legacy mapped)"), result.get("confidence", 0.7)
 
-    # Fallback: length heuristic
-    words = len(message.split())
-    if words > 50:
-        return "STANDARD", f"Length heuristic ({words} words)", 0.5
-    return "CASUAL", "No escalation triggers, short message", 0.6
+    # ── T1: LOOKUP (questions, status checks) ──
+    matched = [t for t in LOOKUP_TRIGGERS if t in lower]
+    if matched:
+        return "LOOKUP", f"T1 keyword: {matched[0]}", 0.80
+
+    # ── T0: TRIVIAL (acknowledgments, greetings) ──
+    if lower.rstrip(".!?,") in TRIVIAL_PATTERNS or lower in TRIVIAL_PATTERNS:
+        return "TRIVIAL", f"Acknowledgment: '{lower[:20]}'", 0.95
+
+    if word_count <= 3:
+        return "TRIVIAL", f"Short message ({word_count} words), no action verb", 0.70
+
+    # ── Fallback: length heuristic ──
+    if word_count > 50:
+        return "TASK", f"Long message ({word_count} words), defaulting to TASK", 0.50
+
+    return "LOOKUP", f"No strong signal ({word_count} words), defaulting to LOOKUP", 0.40
+
+
+def resolve_tier_override(override: str) -> str:
+    """Resolve a tier override to a valid 5-tier name. Accepts legacy names."""
+    upper = override.upper().strip()
+    if upper in ALL_TIERS:
+        return upper
+    if upper in LEGACY_MAP:
+        return LEGACY_MAP[upper]
+    return ""
+
+
+def get_legacy_tier(tier: str) -> str:
+    """Map 5-tier name to legacy CASUAL/STANDARD/CONSEQUENTIAL."""
+    return TIER_TO_LEGACY.get(tier, "STANDARD")
+
+
+def get_ceremony_depth(tier: str) -> str:
+    """Get the DRAFT ceremony depth for a tier."""
+    return TIER_CEREMONY.get(tier, "visible")
 
 
 def should_escalate(session: dict) -> tuple[str, str] | None:
@@ -177,9 +244,17 @@ def should_escalate(session: dict) -> tuple[str, str] | None:
             if isinstance(state, dict) and state.get("status") == "AMBIGUOUS":
                 ambiguous_count += 1
 
-    if ambiguous_count > 2 and session["tier"] == "CASUAL":
-        return "STANDARD", f"Multiple ambiguous fields ({ambiguous_count})"
-    if ambiguous_count > 4 and session["tier"] == "STANDARD":
+    tier = session["tier"]
+    if ambiguous_count > 2 and tier in ("TRIVIAL", "LOOKUP"):
+        return "TASK", f"Multiple ambiguous fields ({ambiguous_count})"
+    if ambiguous_count > 3 and tier == "TASK":
+        return "MULTI", f"Many ambiguous fields ({ambiguous_count})"
+    if ambiguous_count > 4 and tier == "MULTI":
+        return "CONSEQUENTIAL", f"High ambiguity count ({ambiguous_count})"
+    # Legacy compat
+    if ambiguous_count > 2 and tier == "CASUAL":
+        return "TASK", f"Multiple ambiguous fields ({ambiguous_count})"
+    if ambiguous_count > 4 and tier == "STANDARD":
         return "CONSEQUENTIAL", f"Many ambiguous fields ({ambiguous_count})"
     return None
 
@@ -500,6 +575,215 @@ def _suggest_answer(field_key: str, intent: str) -> str | None:
     return scaffolds.get(field_key)
 
 
+# ── Open Elicitation (Cognitive Interview) ────────────────
+
+
+def open_elicitation(session_id: str) -> dict:
+    """Open elicitation step — single unstructured question before mapping.
+
+    For TASK+ tiers, asks the human to describe intent freely before
+    the AI interprets. Prevents anchoring bias (GAP-02).
+    Based on Cognitive Interview and PEACE model principles.
+    """
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+
+    session = storage.get_session(session_id)
+    if not session:
+        return {"error": f"Session {session_id} not found"}
+
+    tier = session.get("tier", "TASK")
+    ceremony = TIER_CEREMONY.get(tier, "visible")
+
+    # TRIVIAL/LOOKUP skip open elicitation
+    if ceremony in ("invisible", "tag"):
+        storage.log_audit(session_id, "open_elicit", "skipped", f"Ceremony={ceremony}, tier={tier}")
+        return {
+            "session_id": session_id,
+            "skipped": True,
+            "reason": f"Tier {tier} uses {ceremony} ceremony — open elicitation not needed.",
+        }
+
+    intent = session.get("intent", "")
+
+    # Generate a contextual open question
+    if _llm_available() and intent:
+        prompt = f"""Generate one open-ended elicitation question for this task.
+The question should invite the human to describe their full intent before any AI interpretation.
+Do NOT ask about specific fields. Ask them to paint the picture.
+
+Task intent: {intent[:300]}
+
+Rules:
+- One question only
+- Open-ended (not yes/no)
+- Invites elaboration, not confirmation
+- Acknowledges what they've said so far"""
+
+        result = _llm_call(prompt, {"type": "object", "properties": {
+            "question": {"type": "string"},
+            "framing": {"type": "string"},
+        }, "required": ["question"]}, timeout=15)
+
+        if result and result.get("question"):
+            q = result["question"]
+            framing = result.get(
+                "framing", "Your description helps me map this accurately before I start interpreting."
+            )
+            storage.log_audit(session_id, "open_elicit", "generated", q[:200])
+            return {
+                "session_id": session_id,
+                "question": q,
+                "framing": framing,
+                "instruction": "Present this question to the human. Their response becomes context for draft_map.",
+            }
+
+    # Fallback: static open question
+    fallback_q = (
+        "Before I map this out — can you describe in your own words "
+        "what you're trying to accomplish and what success looks like?"
+    )
+    storage.log_audit(session_id, "open_elicit", "fallback", f"Tier={tier}")
+    return {
+        "session_id": session_id,
+        "question": fallback_q,
+        "framing": "Your description shapes how I understand this — nothing is assumed yet.",
+        "instruction": "Present this question to the human. Their response becomes context for draft_map.",
+    }
+
+
+# ── Assumption Quality Scoring ────────────────────────────
+
+
+_QUALITY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "falsifiability": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "impact": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "novelty": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "reasoning": {"type": "string"},
+    },
+    "required": ["falsifiability", "impact", "novelty"],
+}
+
+
+def score_assumptions(session_id: str) -> dict:
+    """Score each assumption by falsifiability, impact, and novelty.
+
+    Returns quality scores and flags low-quality assumptions for replacement.
+    Based on CIA Key Assumptions Check quality criteria.
+    """
+    closed = _check_open(session_id)
+    if closed:
+        return closed
+
+    session = storage.get_session(session_id)
+    if not session:
+        return {"error": f"Session {session_id} not found"}
+
+    assumptions = session.get("assumptions", [])
+    if not assumptions:
+        return {"session_id": session_id, "scored": 0, "results": [], "note": "No assumptions to score."}
+
+    use_llm = _llm_available()
+    results = []
+
+    for i, assumption in enumerate(assumptions):
+        claim = assumption.get("claim", "")
+        if not claim:
+            continue
+
+        if use_llm:
+            score = _score_assumption_llm(claim, session.get("intent", ""))
+        else:
+            score = _score_assumption_heuristic(claim, assumption.get("source", ""))
+
+        quality = round((score["falsifiability"] + score["impact"] + score["novelty"]) / 3, 3)
+        low_quality = quality < 0.4
+
+        result = {
+            "index": i,
+            "claim": claim[:100],
+            "falsifiability": score["falsifiability"],
+            "impact": score["impact"],
+            "novelty": score["novelty"],
+            "quality_score": quality,
+            "low_quality": low_quality,
+        }
+        if low_quality:
+            result["warning"] = "Low quality — consider replacing with a more specific, testable claim."
+        results.append(result)
+
+        # Update assumption in session with quality score
+        assumptions[i]["quality_score"] = quality
+        assumptions[i]["low_quality"] = low_quality
+
+    storage.update_session(session_id, assumptions=assumptions)
+    storage.log_audit(
+        session_id, "score_assumptions", f"{len(results)} scored",
+        f"Low quality: {sum(1 for r in results if r.get('low_quality'))}",
+    )
+
+    return {
+        "session_id": session_id,
+        "scored": len(results),
+        "average_quality": round(sum(r["quality_score"] for r in results) / len(results), 3) if results else 0,
+        "low_quality_count": sum(1 for r in results if r.get("low_quality")),
+        "results": results,
+    }
+
+
+def _score_assumption_llm(claim: str, intent: str) -> dict:
+    """Score assumption quality using LLM."""
+    prompt = f"""Score this governance assumption on three dimensions (0.0-1.0 each):
+
+Assumption: {claim[:200]}
+Task intent: {intent[:200]}
+
+Falsifiability: How testable is this? Can you clearly prove it wrong? (1.0 = highly testable, 0.0 = unfalsifiable)
+Impact: If this assumption is wrong, how much rework? (1.0 = total rework, 0.0 = trivial)
+Novelty: Is this a genuine risk or just restating the obvious? (1.0 = novel insight, 0.0 = obvious restatement)"""
+
+    result = _llm_call(prompt, _QUALITY_SCHEMA, timeout=15)
+    if result:
+        return {
+            "falsifiability": result.get("falsifiability", 0.5),
+            "impact": result.get("impact", 0.5),
+            "novelty": result.get("novelty", 0.5),
+        }
+    return _score_assumption_heuristic(claim, "llm_fallback")
+
+
+def _score_assumption_heuristic(claim: str, source: str) -> dict:
+    """Heuristic assumption quality scoring without LLM."""
+    lower = claim.lower()
+
+    # Falsifiability: does it have testable conditions?
+    falsifiability = 0.5
+    test_words = ["if ", "when ", "unless ", "would ", "could ", "fails", "breaks", "wrong"]
+    if any(w in lower for w in test_words):
+        falsifiability = 0.7
+    if "not " in lower or "never " in lower or "always " in lower:
+        falsifiability = 0.8  # Strong claims are more falsifiable
+
+    # Impact: does it reference scope, architecture, or critical systems?
+    impact = 0.5
+    critical_words = ["architecture", "governance", "security", "scope", "authority", "production", "data"]
+    if any(w in lower for w in critical_words):
+        impact = 0.7
+
+    # Novelty: is it just echoing a confirmed field?
+    novelty = 0.5
+    restatement_patterns = ["for d", "for r", "for a", "for f", "for t", "context_extraction"]
+    if source == "context_extraction" or any(p in lower for p in restatement_patterns):
+        novelty = 0.2  # Likely restating confirmed fields
+    if source in ("llm_adversarial", "manual", "devils_advocate"):
+        novelty = 0.7
+
+    return {"falsifiability": falsifiability, "impact": impact, "novelty": novelty}
+
+
 # ── Assumptions ───────────────────────────────────────────
 
 _ASSUMPTION_SCHEMA = {
@@ -537,7 +821,7 @@ def generate_assumptions(session_id: str) -> list[dict]:
     use_llm = _llm_available()
 
     # Determine assumption count by tier
-    max_assumptions = {"CASUAL": 2, "STANDARD": 3, "CONSEQUENTIAL": 5}.get(tier, 3)
+    max_assumptions = TIER_ASSUMPTIONS.get(tier, 3)
 
     if use_llm:
         assumptions = _generate_llm_assumptions(dims, session.get("intent", ""), tier, max_assumptions)
@@ -1211,7 +1495,7 @@ def _session_analytics(session: dict) -> dict:
         "tier": session.get("tier", "UNKNOWN"),
     }
 
-_TIER_ORDER = ["CASUAL", "STANDARD", "CONSEQUENTIAL"]
+_TIER_ORDER = ["TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL"]
 
 
 def escalate_tier(session_id: str, reason: str) -> dict:
@@ -1225,8 +1509,12 @@ def escalate_tier(session_id: str, reason: str) -> dict:
     if not reason or not reason.strip():
         return {"error": "Reason mandatory."}
 
-    current_idx = _TIER_ORDER.index(session["tier"]) if session["tier"] in _TIER_ORDER else 0
-    if current_idx >= 2:
+    current_tier = session["tier"]
+    # Normalize legacy tier names
+    if current_tier in LEGACY_MAP:
+        current_tier = LEGACY_MAP[current_tier]
+    current_idx = _TIER_ORDER.index(current_tier) if current_tier in _TIER_ORDER else 0
+    if current_idx >= len(_TIER_ORDER) - 1:
         return {"tier": "CONSEQUENTIAL", "note": "Already at maximum tier."}
 
     new_tier = _TIER_ORDER[current_idx + 1]
@@ -1246,9 +1534,13 @@ def deescalate_tier(session_id: str, reason: str) -> dict:
     if not reason or not reason.strip():
         return {"error": "Reason mandatory."}
 
-    current_idx = _TIER_ORDER.index(session["tier"]) if session["tier"] in _TIER_ORDER else 2
+    current_tier = session["tier"]
+    # Normalize legacy tier names
+    if current_tier in LEGACY_MAP:
+        current_tier = LEGACY_MAP[current_tier]
+    current_idx = _TIER_ORDER.index(current_tier) if current_tier in _TIER_ORDER else len(_TIER_ORDER) - 1
     if current_idx <= 0:
-        return {"tier": "CASUAL", "note": "Already at minimum tier."}
+        return {"tier": "TRIVIAL", "note": "Already at minimum tier."}
 
     new_tier = _TIER_ORDER[current_idx - 1]
     storage.update_session(session_id, tier=new_tier)

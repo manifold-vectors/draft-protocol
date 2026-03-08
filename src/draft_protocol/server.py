@@ -3,9 +3,10 @@
 Ensures AI understands human intent before execution begins.
 Transport: stdio (MCP standard)
 
-Tools (18):
-  draft_intake / draft_map / draft_elicit / draft_confirm / draft_confirm_batch
-  draft_quick_confirm / draft_assumptions / draft_verify / draft_verify_batch
+Tools (20):
+  draft_intake / draft_open_elicit / draft_map / draft_elicit / draft_confirm
+  draft_confirm_batch / draft_quick_confirm
+  draft_assumptions / draft_score_assumptions / draft_verify / draft_verify_batch
   draft_gate / draft_review / draft_status / draft_unscreen
   draft_add_assumption / draft_override / draft_close
   draft_escalate / draft_deescalate
@@ -27,7 +28,7 @@ mcp = FastMCP(
         "draft_add_assumption for manual assumptions, "
         "draft_override for authorized gate bypass on known tool bugs (not governance bypass)."
     ),
-    version="1.1.0",
+    version="1.2.0",
 )
 
 # ── Annotation constants ──
@@ -52,8 +53,8 @@ def draft_intake(message: str, tier_override: str = "") -> dict:
     if active:
         storage.close_session(active["id"])
 
-    if tier_override and tier_override.upper() in ("CASUAL", "STANDARD", "CONSEQUENTIAL"):
-        tier = tier_override.upper()
+    if tier_override and engine.resolve_tier_override(tier_override):
+        tier = engine.resolve_tier_override(tier_override)
         reasoning = f"Tier manually set to {tier}"
         confidence = 1.0
     else:
@@ -73,13 +74,15 @@ def draft_intake(message: str, tier_override: str = "") -> dict:
     result = {
         "session_id": session_id,
         "tier": tier,
+        "legacy_tier": engine.get_legacy_tier(tier),
+        "ceremony": engine.get_ceremony_depth(tier),
         "classification_reasoning": reasoning,
         "classification_confidence": confidence,
         "next_step": _next_step_for_tier(tier),
     }
 
-    if tier == "CASUAL":
-        result["note"] = "Casual tier: DRAFT mapping is internal only. Respond naturally."
+    if tier in ("TRIVIAL", "LOOKUP"):
+        result["note"] = f"{tier} tier: DRAFT mapping is internal only. Respond naturally."
 
     return result
 
@@ -106,6 +109,33 @@ def draft_map(session_id: str, context: str) -> dict:
         "summary": summary,
         "next_step": "Call draft_elicit to get targeted questions for MISSING/AMBIGUOUS fields.",
     }
+
+
+@mcp.tool(annotations={"title": "Open Elicitation", **_RO})
+def draft_open_elicit(session_id: str) -> dict:
+    """Open elicitation — ask one unstructured question before mapping.
+
+    For TASK+ tiers, invites the human to describe their full intent
+    before AI interpretation begins. Prevents anchoring bias.
+    TRIVIAL/LOOKUP tiers skip this automatically.
+
+    Args:
+        session_id: Active session ID from draft_intake.
+    """
+    return engine.open_elicitation(session_id)
+
+
+@mcp.tool(annotations={"title": "Score Assumptions", **_RO})
+def draft_score_assumptions(session_id: str) -> dict:
+    """Score assumptions by falsifiability, impact, and novelty.
+
+    CIA Key Assumptions Check quality criteria. Low-quality assumptions
+    are flagged for replacement. Scores are 0.0-1.0 per dimension.
+
+    Args:
+        session_id: Active session ID with generated assumptions.
+    """
+    return engine.score_assumptions(session_id)
 
 
 @mcp.tool(annotations={"title": "Generate Elicitation Questions", **_RO})
@@ -367,15 +397,19 @@ def draft_deescalate(session_id: str, reason: str) -> dict:
 
 
 def _next_step_for_tier(tier: str) -> str:
-    if tier == "CASUAL":
-        return "Casual tier — respond naturally. Internal DRAFT mapping only."
-    elif tier == "STANDARD":
-        return "Call draft_map with the user's full context to map DRAFT dimensions."
-    else:
-        return (
-            "CONSEQUENTIAL: Call draft_map with full context. All 7 steps mandatory. "
-            "Devil's Advocate in assumptions. Review required."
-        )
+    return {
+        "TRIVIAL": "Trivial tier — respond naturally. Internal DRAFT only.",
+        "LOOKUP": "Lookup tier — respond naturally. One-line classification tag.",
+        "TASK": "Call draft_map with the user's full context to map DRAFT dimensions.",
+        "MULTI": (
+            "Call draft_open_elicit for unstructured intent gathering, "
+            "then draft_map with full context. Targeted elicitation for gaps."
+        ),
+    }.get(
+        tier,
+        "CONSEQUENTIAL: Call draft_open_elicit first, then draft_map with full context. "
+        "All 7 steps mandatory. Devil's Advocate in assumptions. Review required.",
+    )
 
 
 def _dimension_summary(dimensions: dict) -> dict:

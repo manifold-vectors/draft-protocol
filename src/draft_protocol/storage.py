@@ -8,7 +8,8 @@ from datetime import datetime, timezone
 from draft_protocol.config import DB_PATH
 
 # M1.4: Valid tier enum — reject anything not in this set
-VALID_TIERS = {"CASUAL", "STANDARD", "CONSEQUENTIAL"}
+VALID_TIERS = {"TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL",
+               "CASUAL", "STANDARD"}  # Legacy compat
 
 
 def get_db() -> sqlite3.Connection:
@@ -63,6 +64,9 @@ def create_session(tier: str, intent: str) -> str:
     # M1.4: Validate tier enum
     if tier not in VALID_TIERS:
         raise ValueError(f"Invalid tier '{tier}'. Must be one of: {', '.join(sorted(VALID_TIERS))}")
+    # Map legacy 3-tier names to 5-tier
+    _LEGACY_MAP = {"CASUAL": "TRIVIAL", "STANDARD": "TASK"}
+    tier = _LEGACY_MAP.get(tier, tier)
     sid = str(uuid.uuid4())[:12]
     conn = get_db()
     now = _now()
