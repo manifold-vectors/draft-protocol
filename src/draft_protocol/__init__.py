@@ -39,6 +39,12 @@ from draft_protocol.engine import (
     verify_assumption,
     verify_batch,
 )
+from draft_protocol.extension_points import (
+    clear_all_hooks,
+    register_classify_hook,
+    register_post_gate_hook,
+    register_storage_path_hook,
+)
 from draft_protocol.providers import (
     embed_available,
     llm_available,
@@ -82,4 +88,9 @@ __all__ = [
     # Providers
     "llm_available",
     "embed_available",
+    # Extension Points
+    "register_classify_hook",
+    "register_post_gate_hook",
+    "register_storage_path_hook",
+    "clear_all_hooks",
 ]
