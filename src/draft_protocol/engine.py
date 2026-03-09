@@ -14,6 +14,7 @@ Supports any LLM provider via DRAFT_LLM_PROVIDER env var:
   ollama, openai (+ compatible APIs), anthropic, or none (keyword-only).
 """
 
+import contextlib
 import math
 from typing import Any
 
@@ -1044,10 +1045,8 @@ def check_gate(session_id: str) -> dict:
     if passed:
         hook = get_post_gate_hook()
         if hook is not None:
-            try:
-                hook(session_id, result)
-            except Exception:
-                pass  # Post-gate hooks are advisory, not blocking
+            with contextlib.suppress(Exception):
+                hook(session_id, result)  # Post-gate hooks are advisory, not blocking
 
     # M1.5: Context enrichment — compliant agents get rich context for free
     if passed:
