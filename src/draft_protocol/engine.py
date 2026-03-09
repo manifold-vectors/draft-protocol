@@ -15,6 +15,7 @@ Supports any LLM provider via DRAFT_LLM_PROVIDER env var:
 """
 
 import math
+from typing import Any
 
 from draft_protocol import providers, storage
 from draft_protocol.config import (
@@ -33,6 +34,7 @@ from draft_protocol.config import (
     TIER_TO_LEGACY,
     TRIVIAL_PATTERNS,
 )
+from draft_protocol.extension_points import get_classify_hook, get_post_gate_hook
 
 # ── M1.3: Closed Session Guard ───────────────────────────
 
@@ -142,6 +144,13 @@ def classify_tier(message: str) -> tuple[str, str, float]:
     message = str(message).strip() if message is not None else ""
     if not message:
         return "REJECTED", "Empty or whitespace-only message — cannot classify", 0.0
+
+    # Extension point: custom classifier (e.g., GDE) gets first shot
+    hook = get_classify_hook()
+    if hook is not None:
+        hook_result = hook(message)
+        if hook_result is not None:
+            return hook_result
 
     lower = message.lower()
     words = message.split()
@@ -495,7 +504,7 @@ def generate_elicitation(session_id: str) -> list[dict]:
     if not session:
         return [{"error": f"Session {session_id} not found"}]
 
-    questions = []
+    questions: list[dict[str, Any]] = []
     dims = session.get("dimensions", {})
     intent = session.get("intent", "")
     use_llm = _llm_available()
@@ -525,8 +534,8 @@ def generate_elicitation(session_id: str) -> list[dict]:
     storage.log_audit(session_id, "draft_elicit", "questions_generated", f"Generated {len(questions)} questions")
 
     # Collaborative framing (PEACE + MI) — added to each question
-    for q in questions:
-        q["framing"] = _collaborative_frame(q["field"], q.get("current_status", "MISSING"))
+    for item in questions:
+        item["framing"] = _collaborative_frame(item["field"], item.get("current_status", "MISSING"))
 
     return questions
 
@@ -1030,6 +1039,15 @@ def check_gate(session_id: str) -> dict:
 
     if perfunctory_warnings:
         result["warnings"] = perfunctory_warnings
+
+    # Extension point: post-gate hook (e.g., cross-gate wiring)
+    if passed:
+        hook = get_post_gate_hook()
+        if hook is not None:
+            try:
+                hook(session_id, result)
+            except Exception:
+                pass  # Post-gate hooks are advisory, not blocking
 
     # M1.5: Context enrichment — compliant agents get rich context for free
     if passed:
