@@ -18,8 +18,6 @@ import contextlib
 import math
 from typing import Any
 
-from draft_protocol.hmac_utils import sign_gate_pass
-
 from draft_protocol import providers, storage
 from draft_protocol.config import (
     ALL_TIERS,
@@ -38,6 +36,7 @@ from draft_protocol.config import (
     TRIVIAL_PATTERNS,
 )
 from draft_protocol.extension_points import get_classify_hook, get_post_gate_hook
+from draft_protocol.hmac_utils import sign_gate_pass
 
 # ── M1.3: Closed Session Guard ───────────────────────────
 
