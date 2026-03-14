@@ -36,7 +36,7 @@ from draft_protocol.config import (
     TRIVIAL_PATTERNS,
 )
 from draft_protocol.extension_points import get_classify_hook, get_post_gate_hook
-from draft_protocol.hmac_utils import sign_gate_pass
+from draft_protocol.hmac_utils import sign_assertion, sign_gate_pass
 
 # ── M1.3: Closed Session Guard ───────────────────────────
 
@@ -1040,6 +1040,15 @@ def check_gate(session_id: str) -> dict:
         "summary": f"{'[PASS]' if passed else '[BLOCKED]'}: {confirmed}/{total}",
     }
 
+    # Phase A: emit signed assertion for cross-gate consumption
+    if passed:
+        result["assertion"] = sign_assertion("draft_gate_passed", {
+            "session_id": session_id,
+            "tier": session.get("tier", "STANDARD") if session else "STANDARD",
+            "confirmed_fields": confirmed,
+            "total_fields": total,
+        })
+
     if perfunctory_warnings:
         result["warnings"] = perfunctory_warnings
 
@@ -1204,7 +1213,18 @@ def override_gate(session_id: str, reason: str) -> dict:
     storage.log_audit(
         session_id, "override_gate", "OVERRIDDEN", f"AUTHORIZED: {reason.strip()}. Blockers: {gate.get('blockers', [])}"
     )
-    return {"status": "OVERRIDDEN", "reason": reason.strip(), "blockers": gate.get("blockers", [])}
+    override_assertion = sign_assertion("draft_gate_passed", {
+        "session_id": session_id,
+        "tier": session.get("tier", "STANDARD"),
+        "override": True,
+        "reason": reason.strip(),
+    })
+    return {
+        "status": "OVERRIDDEN",
+        "reason": reason.strip(),
+        "blockers": gate.get("blockers", []),
+        "assertion": override_assertion,
+    }
 
 
 def verify_assumption(session_id: str, index: int, verified: bool, note: str = "") -> dict:

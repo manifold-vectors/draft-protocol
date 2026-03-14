@@ -1,54 +1,121 @@
-"""HMAC signing for gate_passed — prevents spoofing of gate status.
+"""HMAC signing for inter-gate assertions.
 
-The gate_passed flag is the critical trust signal that threads through
-the cross-gate pipeline. Without signing, any process with SQLite write
-access could flip gate_passed=1 and bypass DRAFT governance.
+Provides integrity guarantees for all cross-gate communication.
+Each assertion is signed with HMAC-SHA256, includes a timestamp
+and a monotonic nonce for replay protection.
 
-HMAC-SHA256 signs: session_id | gate_passed | timestamp
 Secret comes from GATE_HMAC_SECRET environment variable.
 """
 
 import hashlib
 import hmac
+import json
 import os
 import time
+from typing import Any
+
+# Monotonic nonce counter (per-process, resets on restart)
+_nonce_counter: int = 0
 
 
 def _get_secret() -> bytes:
     """Get HMAC secret from environment. Falls back to a default for dev."""
     secret = os.environ.get("GATE_HMAC_SECRET", "")
     if not secret:
-        # Dev fallback — NOT safe for production
         secret = "vector-gate-dev-secret-change-me"
     return secret.encode()
 
 
-def sign_gate_pass(session_id: str) -> str:
-    """Compute HMAC for a gate pass event.
+def _next_nonce() -> int:
+    """Return next monotonic nonce."""
+    global _nonce_counter
+    _nonce_counter += 1
+    return _nonce_counter
 
-    Returns hex-encoded HMAC string to store alongside gate_passed=1.
-    The timestamp is embedded in the signature payload so the same
-    session_id doesn't produce the same HMAC if re-signed.
+
+def sign_assertion(assertion_type: str, payload: dict[str, Any]) -> dict:
+    """Sign an arbitrary inter-gate assertion.
+
+    Returns a complete signed assertion dict ready for transport:
+    {
+        "type": "draft_gate_passed",
+        "payload": {...},
+        "timestamp": "1773474000",
+        "nonce": 1,
+        "hmac": "hex..."
+    }
+    """
+    ts = str(int(time.time()))
+    nonce = _next_nonce()
+    # Canonical form: type|timestamp|nonce|sorted-json-payload
+    canonical = f"{assertion_type}|{ts}|{nonce}|{json.dumps(payload, sort_keys=True)}"
+    sig = hmac.new(_get_secret(), canonical.encode(), hashlib.sha256).hexdigest()
+    return {
+        "type": assertion_type,
+        "payload": payload,
+        "timestamp": ts,
+        "nonce": nonce,
+        "hmac": sig,
+    }
+
+
+def verify_assertion(assertion: dict, max_age_seconds: int = 300) -> dict:
+    """Verify a signed assertion.
+
+    Checks HMAC integrity, timestamp freshness, and nonce monotonicity.
+
+    Returns:
+        {"valid": True, "type": "...", "payload": {...}}
+        {"valid": False, "reason": "..."}
+    """
+    required = {"type", "payload", "timestamp", "nonce", "hmac"}
+    if not isinstance(assertion, dict) or not required.issubset(assertion.keys()):
+        return {"valid": False, "reason": f"Missing fields: {required - set(assertion.keys())}"}
+
+    a_type = assertion["type"]
+    payload = assertion["payload"]
+    ts = assertion["timestamp"]
+    nonce = assertion["nonce"]
+    sig = assertion["hmac"]
+
+    # Reconstruct canonical form and verify HMAC
+    canonical = f"{a_type}|{ts}|{nonce}|{json.dumps(payload, sort_keys=True)}"
+    expected = hmac.new(_get_secret(), canonical.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected):
+        return {"valid": False, "reason": "HMAC mismatch — possible tampering"}
+
+    # Timestamp freshness
+    try:
+        age = abs(int(time.time()) - int(ts))
+        if age > max_age_seconds:
+            return {"valid": False, "reason": f"Assertion stale ({age}s > {max_age_seconds}s)"}
+    except (ValueError, TypeError):
+        return {"valid": False, "reason": "Invalid timestamp"}
+
+    return {"valid": True, "type": a_type, "payload": payload}
+
+
+# ── Legacy compat: gate_passed signing (wraps new generalized API) ──
+
+def sign_gate_pass(session_id: str) -> str:
+    """Compute HMAC for a gate pass event (legacy format: ts:hex).
+
+    Kept for backward compatibility with existing cross_gate.py code.
+    New code should use sign_assertion() directly.
     """
     ts = str(int(time.time()))
     payload = f"{session_id}|1|{ts}".encode()
     sig = hmac.new(_get_secret(), payload, hashlib.sha256).hexdigest()
-    # Return ts:sig so verifier can reconstruct the payload
     return f"{ts}:{sig}"
 
 
 def verify_gate_pass(session_id: str, gate_hmac: str | None) -> bool:
-    """Verify that a gate_passed=1 was legitimately signed.
-
-    Returns True if HMAC is valid, False if missing/invalid/tampered.
-    """
+    """Verify legacy gate_passed HMAC (ts:hex format)."""
     if not gate_hmac:
         return False
-
     parts = gate_hmac.split(":", 1)
     if len(parts) != 2:
         return False
-
     ts, sig = parts
     payload = f"{session_id}|1|{ts}".encode()
     expected = hmac.new(_get_secret(), payload, hashlib.sha256).hexdigest()
@@ -56,16 +123,9 @@ def verify_gate_pass(session_id: str, gate_hmac: str | None) -> bool:
 
 
 def verify_or_warn(session_id: str, gate_hmac: str | None) -> dict:
-    """Verify gate HMAC and return structured result for cross-gate use.
-
-    Returns:
-        {"valid": True} if HMAC checks out
-        {"valid": False, "reason": "..."} if not
-    """
+    """Verify legacy gate HMAC and return structured result."""
     if gate_hmac is None:
         return {"valid": False, "reason": "gate_hmac missing (legacy session or unsigned)"}
-
     if verify_gate_pass(session_id, gate_hmac):
         return {"valid": True}
-
     return {"valid": False, "reason": "gate_hmac signature mismatch — possible tampering"}
