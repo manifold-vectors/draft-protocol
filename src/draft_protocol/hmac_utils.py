@@ -86,7 +86,9 @@ def verify_assertion(assertion: dict, max_age_seconds: int = 300) -> dict:
         {"valid": False, "reason": "..."}
     """
     required = {"type", "payload", "timestamp", "nonce", "hmac"}
-    if not isinstance(assertion, dict) or not required.issubset(assertion.keys()):
+    if not isinstance(assertion, dict):
+        return {"valid": False, "reason": f"Expected dict, got {type(assertion).__name__}"}
+    if not required.issubset(assertion.keys()):
         return {"valid": False, "reason": f"Missing fields: {required - set(assertion.keys())}"}
 
     a_type = assertion["type"]
