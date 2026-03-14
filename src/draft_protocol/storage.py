@@ -32,6 +32,7 @@ def init_db():
             dimensions JSON NOT NULL DEFAULT '{}',
             assumptions JSON NOT NULL DEFAULT '[]',
             gate_passed INTEGER NOT NULL DEFAULT 0,
+            gate_hmac TEXT,
             review_done INTEGER NOT NULL DEFAULT 0,
             review_notes TEXT,
             created_at TEXT NOT NULL,
@@ -53,6 +54,20 @@ def init_db():
 
 # Initialize on import
 init_db()
+
+
+def _migrate_gate_hmac():
+    """Add gate_hmac column if missing (migration for existing DBs)."""
+    conn = get_db()
+    try:
+        conn.execute("SELECT gate_hmac FROM sessions LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE sessions ADD COLUMN gate_hmac TEXT")
+        conn.commit()
+    conn.close()
+
+
+_migrate_gate_hmac()
 
 
 def _now() -> str:

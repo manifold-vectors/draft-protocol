@@ -18,6 +18,8 @@ import contextlib
 import math
 from typing import Any
 
+from draft_protocol.hmac_utils import sign_gate_pass
+
 from draft_protocol import providers, storage
 from draft_protocol.config import (
     ALL_TIERS,
@@ -1026,7 +1028,8 @@ def check_gate(session_id: str) -> dict:
 
     passed = len(blockers) == 0
     if passed:
-        storage.update_session(session_id, gate_passed=1)
+        gate_sig = sign_gate_pass(session_id)
+        storage.update_session(session_id, gate_passed=1, gate_hmac=gate_sig)
 
     storage.log_audit(session_id, "draft_gate", "gate_check", f"{'PASS' if passed else 'FAIL'}: {confirmed}/{total}")
 
@@ -1197,7 +1200,8 @@ def override_gate(session_id: str, reason: str) -> dict:
     if gate.get("passed"):
         return {"note": "Already passed.", "gate": gate}
 
-    storage.update_session(session_id, gate_passed=1)
+    gate_sig = sign_gate_pass(session_id)
+    storage.update_session(session_id, gate_passed=1, gate_hmac=gate_sig)
     storage.log_audit(
         session_id, "override_gate", "OVERRIDDEN", f"AUTHORIZED: {reason.strip()}. Blockers: {gate.get('blockers', [])}"
     )
