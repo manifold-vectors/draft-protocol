@@ -19,8 +19,25 @@ _nonce_counter: int = 0
 
 
 def _get_secret() -> bytes:
-    """Get HMAC secret from environment. Falls back to a default for dev."""
+    """Get HMAC secret from environment, .env file, or dev fallback."""
     secret = os.environ.get("GATE_HMAC_SECRET", "")
+    if not secret:
+        for env_path in [
+            os.path.join(os.environ.get("VECTORLAB_ROOT", ""), ".env"),
+            r"D:\VECTOR\VectorLab\.env",
+        ]:
+            if env_path and os.path.isfile(env_path):
+                try:
+                    with open(env_path) as f2:
+                        for line in f2:
+                            line = line.strip()
+                            if line.startswith("GATE_HMAC_SECRET=") and not line.startswith("#"):
+                                secret = line.split("=", 1)[1].strip().strip("\"'")
+                                break
+                except OSError:
+                    continue
+            if secret:
+                break
     if not secret:
         secret = "vector-gate-dev-secret-change-me"
     return secret.encode()
