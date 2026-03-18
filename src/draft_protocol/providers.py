@@ -19,6 +19,8 @@ Set via environment variables:
 """
 
 import json
+import logging
+import urllib.error
 import urllib.request
 
 from draft_protocol.config import (
@@ -29,14 +31,29 @@ from draft_protocol.config import (
     LLM_PROVIDER,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _post(url: str, data: dict, headers: dict, timeout: int = 30) -> dict:
-    """HTTP POST with JSON body. Returns parsed response."""
+    """HTTP POST with JSON body. Returns parsed response.
+
+    Raises:
+        urllib.error.URLError: Network or HTTP errors.
+        json.JSONDecodeError: Invalid JSON in response.
+        socket.timeout: Request timed out.
+    """
     body = json.dumps(data).encode("utf-8")
     req = urllib.request.Request(url, data=body, method="POST", headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        result: dict = json.loads(resp.read())
-        return result
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            result: dict = json.loads(resp.read())
+            return result
+    except urllib.error.HTTPError as e:
+        logger.warning("HTTP %d from %s: %s", e.code, url, e.reason)
+        raise
+    except (urllib.error.URLError, TimeoutError) as e:
+        logger.warning("Network error connecting to %s: %s", url, e)
+        raise
 
 
 # ── Provider: Ollama ──────────────────────────────────────
@@ -202,7 +219,8 @@ def chat(prompt: str, schema: dict, timeout: int = 30) -> dict | None:
     try:
         result = fn(prompt, schema, timeout)
         return result if isinstance(result, dict) else None
-    except Exception:
+    except (urllib.error.URLError, json.JSONDecodeError, OSError, ValueError) as e:
+        logger.debug("LLM chat failed (%s): %s", LLM_PROVIDER, e)
         return None
 
 
@@ -218,5 +236,6 @@ def embed(text: str, timeout: int = 30) -> list:
         return []
     try:
         return fn(text, timeout)
-    except Exception:
+    except (urllib.error.URLError, json.JSONDecodeError, OSError, ValueError) as e:
+        logger.debug("Embedding failed (%s): %s", LLM_PROVIDER, e)
         return []

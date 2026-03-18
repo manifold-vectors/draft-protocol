@@ -19,14 +19,16 @@ _nonce_counter: int = 0
 
 
 def _get_secret() -> bytes:
-    """Get HMAC secret from environment, .env file, or dev fallback."""
+    """Get HMAC secret from environment or .env file.
+
+    Raises RuntimeError if no secret is found and DRAFT_DEV_MODE is not set.
+    """
     secret = os.environ.get("GATE_HMAC_SECRET", "")
     if not secret:
-        for env_path in [
-            os.path.join(os.environ.get("VECTORLAB_ROOT", ""), ".env"),
-            r"D:\VECTOR\VectorLab\.env",
-        ]:
-            if env_path and os.path.isfile(env_path):
+        lab_root = os.environ.get("VECTORLAB_ROOT", "")
+        if lab_root:
+            env_path = os.path.join(lab_root, ".env")
+            if os.path.isfile(env_path):
                 try:
                     with open(env_path) as f2:
                         for line in f2:
@@ -35,11 +37,15 @@ def _get_secret() -> bytes:
                                 secret = line.split("=", 1)[1].strip().strip("\"'")
                                 break
                 except OSError:
-                    continue
-            if secret:
-                break
+                    pass
     if not secret:
-        secret = "vector-gate-dev-secret-change-me"
+        if os.environ.get("DRAFT_DEV_MODE", "") == "1":
+            secret = "vector-gate-dev-secret-DO-NOT-USE-IN-PRODUCTION"
+        else:
+            raise RuntimeError(
+                "GATE_HMAC_SECRET not set. Set the environment variable or "
+                "set DRAFT_DEV_MODE=1 for local development."
+            )
     return secret.encode()
 
 

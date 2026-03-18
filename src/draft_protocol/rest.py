@@ -22,6 +22,12 @@ from typing import Any
 
 from draft_protocol import engine, storage
 
+# Maximum request body size (1 MB)
+MAX_BODY_SIZE = 1_048_576
+# Maximum input field lengths
+MAX_MESSAGE_LEN = 10_240  # 10 KB
+MAX_CONTEXT_LEN = 51_200  # 50 KB
+
 
 class DraftHandler(BaseHTTPRequestHandler):
     """Minimal REST handler — no framework dependencies."""
@@ -38,9 +44,14 @@ class DraftHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _read_json(self) -> dict:
-        length = int(self.headers.get("Content-Length", 0))
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except (ValueError, TypeError) as e:
+            raise ValueError("Invalid Content-Length header") from e
         if length == 0:
             return {}
+        if length > MAX_BODY_SIZE:
+            raise ValueError(f"Request body too large ({length} > {MAX_BODY_SIZE})")
         return json.loads(self.rfile.read(length))
 
     def do_OPTIONS(self):  # noqa: N802
@@ -76,7 +87,11 @@ class DraftHandler(BaseHTTPRequestHandler):
     def do_POST(self):  # noqa: N802
         try:
             data = self._read_json()
-        except (json.JSONDecodeError, ValueError):
+        except ValueError as e:
+            status = 413 if "too large" in str(e) else 400
+            self._send_json({"error": str(e)}, status)
+            return
+        except json.JSONDecodeError:
             self._send_json({"error": "Invalid JSON"}, 400)
             return
 
@@ -87,6 +102,9 @@ class DraftHandler(BaseHTTPRequestHandler):
             if not message or not message.strip():
                 self._send_json({"error": "message required"}, 400)
                 return
+            if len(message) > MAX_MESSAGE_LEN:
+                self._send_json({"error": f"message too long ({len(message)} > {MAX_MESSAGE_LEN})"}, 400)
+                return
             tier, reasoning, confidence = engine.classify_tier(message)
             self._send_json({"tier": tier, "reasoning": reasoning, "confidence": confidence})
 
@@ -95,6 +113,9 @@ class DraftHandler(BaseHTTPRequestHandler):
             tier_override = data.get("tier_override", "")
             if not message or not message.strip():
                 self._send_json({"error": "message required"}, 400)
+                return
+            if len(message) > MAX_MESSAGE_LEN:
+                self._send_json({"error": f"message too long ({len(message)} > {MAX_MESSAGE_LEN})"}, 400)
                 return
             # Close any active session first
             active = storage.get_active_session()
@@ -118,6 +139,9 @@ class DraftHandler(BaseHTTPRequestHandler):
             context = data.get("context", "")
             if not sid or not context:
                 self._send_json({"error": "session_id and context required"}, 400)
+                return
+            if len(context) > MAX_CONTEXT_LEN:
+                self._send_json({"error": f"context too long ({len(context)} > {MAX_CONTEXT_LEN})"}, 400)
                 return
             result = engine.map_dimensions(sid, context)
             self._send_json(result)

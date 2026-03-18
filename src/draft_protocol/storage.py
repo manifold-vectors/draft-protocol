@@ -11,6 +11,13 @@ from draft_protocol.config import DB_PATH
 VALID_TIERS = {"TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL",
                "CASUAL", "STANDARD"}  # Legacy compat
 
+# Whitelist of columns that update_session() may modify
+_UPDATABLE_FIELDS = frozenset({
+    "tier", "intent", "provisional_interpretation", "dimensions",
+    "assumptions", "gate_passed", "gate_hmac", "review_done",
+    "review_notes", "closed_at",
+})
+
 
 def get_db() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH))
@@ -98,8 +105,10 @@ def create_session(tier: str, intent: str) -> str:
 def get_session(session_id: str) -> dict | None:
     """Retrieve a session by ID."""
     conn = get_db()
-    row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
-    conn.close()
+    try:
+        row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    finally:
+        conn.close()
     if not row:
         return None
     d = dict(row)
@@ -111,8 +120,10 @@ def get_session(session_id: str) -> dict | None:
 def is_session_closed(session_id: str) -> bool:
     """Check if a session is closed. M1.3: Closed session guard."""
     conn = get_db()
-    row = conn.execute("SELECT closed_at FROM sessions WHERE id = ?", (session_id,)).fetchone()
-    conn.close()
+    try:
+        row = conn.execute("SELECT closed_at FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    finally:
+        conn.close()
     if not row:
         return True  # Nonexistent sessions treated as closed
     return row["closed_at"] is not None
@@ -121,8 +132,10 @@ def is_session_closed(session_id: str) -> bool:
 def get_active_session() -> dict | None:
     """Get the most recent unclosed session."""
     conn = get_db()
-    row = conn.execute("SELECT * FROM sessions WHERE closed_at IS NULL ORDER BY created_at DESC LIMIT 1").fetchone()
-    conn.close()
+    try:
+        row = conn.execute("SELECT * FROM sessions WHERE closed_at IS NULL ORDER BY created_at DESC LIMIT 1").fetchone()
+    finally:
+        conn.close()
     if not row:
         return None
     d = dict(row)
@@ -133,21 +146,27 @@ def get_active_session() -> dict | None:
 
 def update_session(session_id: str, **kwargs):
     """Update session fields. JSON fields auto-serialized."""
+    # Validate field names against whitelist to prevent SQL injection
+    bad_fields = set(kwargs.keys()) - _UPDATABLE_FIELDS
+    if bad_fields:
+        raise ValueError(f"Invalid field(s): {', '.join(sorted(bad_fields))}")
     # M1.4: Validate tier if being updated
     if "tier" in kwargs and kwargs["tier"] not in VALID_TIERS:
         raise ValueError(f"Invalid tier '{kwargs['tier']}'. Must be one of: {', '.join(sorted(VALID_TIERS))}")
     conn = get_db()
-    sets = ["updated_at = ?"]
-    vals = [_now()]
-    for k, v in kwargs.items():
-        if k in ("dimensions", "assumptions"):
-            v = json.dumps(v)
-        sets.append(f"{k} = ?")
-        vals.append(v)
-    vals.append(session_id)
-    conn.execute(f"UPDATE sessions SET {', '.join(sets)} WHERE id = ?", vals)
-    conn.commit()
-    conn.close()
+    try:
+        sets = ["updated_at = ?"]
+        vals = [_now()]
+        for k, v in kwargs.items():
+            if k in ("dimensions", "assumptions"):
+                v = json.dumps(v)
+            sets.append(f"{k} = ?")
+            vals.append(v)
+        vals.append(session_id)
+        conn.execute(f"UPDATE sessions SET {', '.join(sets)} WHERE id = ?", vals)
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def close_session(session_id: str):
@@ -158,9 +177,11 @@ def close_session(session_id: str):
 def log_audit(session_id: str, tool_name: str, action: str, detail: str = ""):
     """Write audit trail entry."""
     conn = get_db()
-    conn.execute(
-        "INSERT INTO audit_log (session_id, tool_name, action, detail, created_at) VALUES (?, ?, ?, ?, ?)",
-        (session_id, tool_name, action, detail, _now()),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute(
+            "INSERT INTO audit_log (session_id, tool_name, action, detail, created_at) VALUES (?, ?, ?, ?, ?)",
+            (session_id, tool_name, action, detail, _now()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
