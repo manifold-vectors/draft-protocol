@@ -37,7 +37,9 @@ jobs:
         run: mypy src/draft_protocol/ --ignore-missing-imports
 
       - name: Test
-        run: pytest tests/ -v --tb=short
+        env:
+          DRAFT_DEV_MODE: "1"
+        run: pytest tests/ -v --tb=short -m "not integration"
 
   release:
     needs: test

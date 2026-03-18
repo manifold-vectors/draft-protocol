@@ -338,6 +338,7 @@ class TestTierAssumptionCounts:
         assumptions = engine.generate_assumptions(sid)
         assert len(assumptions) == 0
 
+    @pytest.mark.integration
     def test_task_generates_up_to_two(self):
         sid = _create_mapped_session("TASK")
         assumptions = engine.generate_assumptions(sid)

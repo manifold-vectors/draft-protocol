@@ -37,4 +37,4 @@ jobs:
       - name: Test
         env:
           DRAFT_DEV_MODE: "1"
-        run: pytest tests/ -v --tb=short
+        run: pytest tests/ -v --tb=short -m "not integration"

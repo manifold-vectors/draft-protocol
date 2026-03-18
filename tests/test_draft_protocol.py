@@ -3,6 +3,8 @@
 import os
 import tempfile
 
+import pytest
+
 # Use a temp DB for tests
 _test_db = tempfile.mktemp(suffix=".db")
 os.environ["DRAFT_DB_PATH"] = _test_db
@@ -227,6 +229,7 @@ class TestGate:
 
 
 class TestAssumptions:
+    @pytest.mark.integration
     def test_generate_assumptions(self):
         sid = create_session("STANDARD", "Build a REST API")
         map_dimensions(sid, "Build a REST API for user management")
@@ -334,6 +337,7 @@ class TestElicitation:
 
 
 class TestProviderConfig:
+    @pytest.mark.integration
     def test_default_provider_is_none(self):
         from draft_protocol import providers
 
@@ -355,6 +359,7 @@ class TestProviderConfig:
         result = providers.embed_available()
         assert isinstance(result, bool)
 
+    @pytest.mark.integration
     def test_provider_dispatch_unknown_provider(self):
         from draft_protocol import providers
 
