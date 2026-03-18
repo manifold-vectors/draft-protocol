@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v1.4.0 (2026-03-18)
+### Security
+- Removed hardcoded HMAC secret — now requires GATE_HMAC_SECRET env var
+- Fixed SQL injection in budget queries (parameterized)
+- Fixed budget race condition (row-level locking)
+- Fixed connection leaks (context managers)
+- Added input validation on all public API endpoints
+
+### CI
+- Added DRAFT_DEV_MODE to CI and Release workflows
+- Marked 4 Ollama-dependent tests as @pytest.mark.integration
+- Added -m "not integration" to CI test commands
+
 ## [1.2.0] - 2026-03-08
 
 ### Added
