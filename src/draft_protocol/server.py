@@ -185,7 +185,7 @@ def draft_confirm_batch(session_id: str, fields: str) -> dict:
     try:
         parsed = _json.loads(fields) if isinstance(fields, str) else fields
     except (ValueError, TypeError):
-        return {"error": "fields must be valid JSON: '{\"D1\": \"value\", \"D2\": \"value\"}'"}
+        return {"error": 'fields must be valid JSON: \'{"D1": "value", "D2": "value"}\''}
     return engine.confirm_batch(session_id, parsed)
 
 
@@ -251,7 +251,7 @@ def draft_verify_batch(session_id: str, verifications: str) -> dict:
     try:
         parsed = _json.loads(verifications) if isinstance(verifications, str) else verifications
     except (ValueError, TypeError):
-        return {"error": "verifications must be valid JSON: '{\"0\": true, \"1\": false}'"}
+        return {"error": 'verifications must be valid JSON: \'{"0": true, "1": false}\''}
     return engine.verify_batch(session_id, parsed)
 
 

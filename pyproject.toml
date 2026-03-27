@@ -79,7 +79,15 @@ target-version = "py310"
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B", "SIM", "TCH"]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "TCH", "RUF"]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "UP007",  # use X | Y for union (supports 3.10+)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [tool.ruff.lint.isort]
 known-first-party = ["draft_protocol"]

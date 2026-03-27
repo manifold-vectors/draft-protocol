@@ -55,10 +55,18 @@ def _check_open(session_id: str) -> dict | None:
 TIER_SCHEMA = {
     "type": "object",
     "properties": {
-        "tier": {"type": "string", "enum": [
-            "TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL",
-            "CASUAL", "STANDARD",  # Legacy compat
-        ]},
+        "tier": {
+            "type": "string",
+            "enum": [
+                "TRIVIAL",
+                "LOOKUP",
+                "TASK",
+                "MULTI",
+                "CONSEQUENTIAL",
+                "CASUAL",
+                "STANDARD",  # Legacy compat
+            ],
+        },
         "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
         "reasoning": {"type": "string"},
     },
@@ -170,6 +178,7 @@ def classify_tier(message: str) -> tuple[str, str, float]:
 
     # Multi-file/multi-system pattern detection
     import re
+
     multi_pattern = re.compile(
         r"(?:\d+\s*(?:files?|changes?|modifications?))"
         r"|(?:(?:across|multiple|several)\s+(?:files?|services?|systems?|collections?))",
@@ -632,10 +641,18 @@ Rules:
 - Invites elaboration, not confirmation
 - Acknowledges what they've said so far"""
 
-        result = _llm_call(prompt, {"type": "object", "properties": {
-            "question": {"type": "string"},
-            "framing": {"type": "string"},
-        }, "required": ["question"]}, timeout=15)
+        result = _llm_call(
+            prompt,
+            {
+                "type": "object",
+                "properties": {
+                    "question": {"type": "string"},
+                    "framing": {"type": "string"},
+                },
+                "required": ["question"],
+            },
+            timeout=15,
+        )
 
         if result and result.get("question"):
             q = result["question"]
@@ -732,7 +749,9 @@ def score_assumptions(session_id: str) -> dict:
 
     storage.update_session(session_id, assumptions=assumptions)
     storage.log_audit(
-        session_id, "score_assumptions", f"{len(results)} scored",
+        session_id,
+        "score_assumptions",
+        f"{len(results)} scored",
         f"Low quality: {sum(1 for r in results if r.get('low_quality'))}",
     )
 
@@ -891,12 +910,14 @@ Rules:
     for _i in range(max_count):
         result = _llm_call(prompt, _ASSUMPTION_SCHEMA, timeout=20)
         if result and result.get("claim"):
-            assumptions.append({
-                "claim": result["claim"],
-                "source": "llm_adversarial",
-                "falsifier": result.get("falsifier", f"If '{result['claim'][:80]}' is wrong, re-elicit."),
-                "impact": result.get("impact", ""),
-            })
+            assumptions.append(
+                {
+                    "claim": result["claim"],
+                    "source": "llm_adversarial",
+                    "falsifier": result.get("falsifier", f"If '{result['claim'][:80]}' is wrong, re-elicit."),
+                    "impact": result.get("impact", ""),
+                }
+            )
         if len(assumptions) >= max_count:
             break
 
@@ -914,24 +935,28 @@ def _generate_heuristic_assumptions(dims: dict, max_count: int) -> list[dict]:
 
     for dim_key, fields in dims.items():
         if isinstance(fields, dict) and fields.get("_screened"):
-            assumptions.append({
-                "claim": f"Dimension {dim_key} ({DIMENSION_NAMES.get(dim_key, '')}) is not applicable.",
-                "source": "screening",
-                "falsifier": (
-                    f"If this task involves {DIMENSION_NAMES.get(dim_key, '').lower()}, screening was wrong."
-                ),
-            })
+            assumptions.append(
+                {
+                    "claim": f"Dimension {dim_key} ({DIMENSION_NAMES.get(dim_key, '')}) is not applicable.",
+                    "source": "screening",
+                    "falsifier": (
+                        f"If this task involves {DIMENSION_NAMES.get(dim_key, '').lower()}, screening was wrong."
+                    ),
+                }
+            )
             continue
         for field_key, info in fields.items():
             if field_key.startswith("_"):
                 continue
             if info.get("status") == "SATISFIED" and info.get("extracted"):
-                assumptions.append({
-                    "claim": f"For {field_key}: {info['extracted']}",
-                    "source": "context_extraction",
-                    "confidence": info.get("confidence", 0.5),
-                    "falsifier": f"If wrong, re-elicit {field_key}.",
-                })
+                assumptions.append(
+                    {
+                        "claim": f"For {field_key}: {info['extracted']}",
+                        "source": "context_extraction",
+                        "confidence": info.get("confidence", 0.5),
+                        "falsifier": f"If wrong, re-elicit {field_key}.",
+                    }
+                )
 
     return assumptions[:max_count]
 
@@ -1042,12 +1067,15 @@ def check_gate(session_id: str) -> dict:
 
     # Phase A: emit signed assertion for cross-gate consumption
     if passed:
-        result["assertion"] = sign_assertion("draft_gate_passed", {
-            "session_id": session_id,
-            "tier": session.get("tier", "STANDARD") if session else "STANDARD",
-            "confirmed_fields": confirmed,
-            "total_fields": total,
-        })
+        result["assertion"] = sign_assertion(
+            "draft_gate_passed",
+            {
+                "session_id": session_id,
+                "tier": session.get("tier", "STANDARD") if session else "STANDARD",
+                "confirmed_fields": confirmed,
+                "total_fields": total,
+            },
+        )
 
     if perfunctory_warnings:
         result["warnings"] = perfunctory_warnings
@@ -1213,12 +1241,15 @@ def override_gate(session_id: str, reason: str) -> dict:
     storage.log_audit(
         session_id, "override_gate", "OVERRIDDEN", f"AUTHORIZED: {reason.strip()}. Blockers: {gate.get('blockers', [])}"
     )
-    override_assertion = sign_assertion("draft_gate_passed", {
-        "session_id": session_id,
-        "tier": session.get("tier", "STANDARD"),
-        "override": True,
-        "reason": reason.strip(),
-    })
+    override_assertion = sign_assertion(
+        "draft_gate_passed",
+        {
+            "session_id": session_id,
+            "tier": session.get("tier", "STANDARD"),
+            "override": True,
+            "reason": reason.strip(),
+        },
+    )
     return {
         "status": "OVERRIDDEN",
         "reason": reason.strip(),
@@ -1534,6 +1565,7 @@ def _session_analytics(session: dict) -> dict:
         "assumption_rejection_rate": round(rejected_assumptions / total_assumptions, 2) if total_assumptions else 0.0,
         "tier": session.get("tier", "UNKNOWN"),
     }
+
 
 _TIER_ORDER = ["TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL"]
 

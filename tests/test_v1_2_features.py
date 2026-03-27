@@ -11,10 +11,10 @@ if "DRAFT_DB_PATH" not in os.environ:
     _test_db = tempfile.mktemp(suffix=".db")
     os.environ["DRAFT_DB_PATH"] = _test_db
 
-import pytest  # noqa: E402
+import pytest
 
-from draft_protocol import engine, storage  # noqa: E402
-from draft_protocol.config import (  # noqa: E402
+from draft_protocol import engine, storage
+from draft_protocol.config import (
     ALL_TIERS,
     LEGACY_MAP,
     TIER_ASSUMPTIONS,

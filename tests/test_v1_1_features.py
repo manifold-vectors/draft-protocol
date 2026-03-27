@@ -12,9 +12,9 @@ if "DRAFT_DB_PATH" not in os.environ:
     _test_db = tempfile.mktemp(suffix=".db")
     os.environ["DRAFT_DB_PATH"] = _test_db
 
-import pytest  # noqa: E402
+import pytest
 
-from draft_protocol import engine, storage  # noqa: E402
+from draft_protocol import engine, storage
 
 
 @pytest.fixture(autouse=True)
@@ -54,11 +54,14 @@ def _fully_confirm(sid):
 class TestConfirmBatch:
     def test_confirm_multiple_fields(self):
         sid = _create_mapped_session()
-        result = engine.confirm_batch(sid, {
-            "D1": "Building a governance engine",
-            "D2": "AI safety domain",
-            "D3": "Without this, agents act without oversight",
-        })
+        result = engine.confirm_batch(
+            sid,
+            {
+                "D1": "Building a governance engine",
+                "D2": "AI safety domain",
+                "D3": "Without this, agents act without oversight",
+            },
+        )
         assert result["confirmed"] == 3
         assert result["rejected"] == 0
         assert result["errors"] == 0
@@ -67,20 +70,26 @@ class TestConfirmBatch:
 
     def test_batch_rejects_empty_values(self):
         sid = _create_mapped_session()
-        result = engine.confirm_batch(sid, {
-            "D1": "Valid answer here",
-            "D2": "",
-            "D3": "  ",
-        })
+        result = engine.confirm_batch(
+            sid,
+            {
+                "D1": "Valid answer here",
+                "D2": "",
+                "D3": "  ",
+            },
+        )
         assert result["confirmed"] == 1
         assert result["rejected"] == 2
 
     def test_batch_rejects_short_values(self):
         sid = _create_mapped_session()
-        result = engine.confirm_batch(sid, {
-            "D1": "ok",
-            "D2": "Valid content for D2",
-        })
+        result = engine.confirm_batch(
+            sid,
+            {
+                "D1": "ok",
+                "D2": "Valid content for D2",
+            },
+        )
         assert result["confirmed"] == 1
         assert result["rejected"] == 1
 
@@ -208,11 +217,14 @@ class TestVerifyBatch:
 class TestPerfunctoryDetection:
     def test_detects_repeated_values(self):
         sid = _create_mapped_session()
-        engine.confirm_batch(sid, {
-            "D1": "yes agreed fine",
-            "D2": "yes agreed fine",
-            "D3": "yes agreed fine",
-        })
+        engine.confirm_batch(
+            sid,
+            {
+                "D1": "yes agreed fine",
+                "D2": "yes agreed fine",
+                "D3": "yes agreed fine",
+            },
+        )
         gate = engine.check_gate(sid)
         assert "warnings" in gate
         assert any("repeated" in w.lower() or "Repeated" in w for w in gate["warnings"])

@@ -54,7 +54,7 @@ class DraftHandler(BaseHTTPRequestHandler):
             raise ValueError(f"Request body too large ({length} > {MAX_BODY_SIZE})")
         return json.loads(self.rfile.read(length))
 
-    def do_OPTIONS(self):  # noqa: N802
+    def do_OPTIONS(self):
         """CORS preflight."""
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -62,7 +62,7 @@ class DraftHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
-    def do_GET(self):  # noqa: N802
+    def do_GET(self):
         if self.path == "/health":
             self._send_json({"status": "ok", "service": "draft-protocol", "version": "0.1.0"})
         elif self.path == "/status":
@@ -84,7 +84,7 @@ class DraftHandler(BaseHTTPRequestHandler):
         else:
             self._send_json({"error": "Not found"}, 404)
 
-    def do_POST(self):  # noqa: N802
+    def do_POST(self):
         try:
             data = self._read_json()
         except ValueError as e:
@@ -183,7 +183,7 @@ class DraftHandler(BaseHTTPRequestHandler):
         else:
             self._send_json({"error": "Not found"}, 404)
 
-    def log_message(self, format, *args):  # noqa: A002
+    def log_message(self, format, *args):
         """Suppress default stderr logging."""
 
 

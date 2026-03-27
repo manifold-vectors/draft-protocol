@@ -8,15 +8,23 @@ from datetime import datetime, timezone
 from draft_protocol.config import DB_PATH
 
 # M1.4: Valid tier enum — reject anything not in this set
-VALID_TIERS = {"TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL",
-               "CASUAL", "STANDARD"}  # Legacy compat
+VALID_TIERS = {"TRIVIAL", "LOOKUP", "TASK", "MULTI", "CONSEQUENTIAL", "CASUAL", "STANDARD"}  # Legacy compat
 
 # Whitelist of columns that update_session() may modify
-_UPDATABLE_FIELDS = frozenset({
-    "tier", "intent", "provisional_interpretation", "dimensions",
-    "assumptions", "gate_passed", "gate_hmac", "review_done",
-    "review_notes", "closed_at",
-})
+_UPDATABLE_FIELDS = frozenset(
+    {
+        "tier",
+        "intent",
+        "provisional_interpretation",
+        "dimensions",
+        "assumptions",
+        "gate_passed",
+        "gate_hmac",
+        "review_done",
+        "review_notes",
+        "closed_at",
+    }
+)
 
 
 def get_db() -> sqlite3.Connection:

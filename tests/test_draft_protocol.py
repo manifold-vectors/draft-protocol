@@ -495,16 +495,19 @@ class TestTierEnumValidation:
 
     def test_create_session_invalid_tier_rejected(self):
         import pytest
+
         with pytest.raises(ValueError, match="Invalid tier"):
             create_session("SUPER_HIGH", "test")
 
     def test_create_session_lowercase_rejected(self):
         import pytest
+
         with pytest.raises(ValueError, match="Invalid tier"):
             create_session("casual", "test")
 
     def test_create_session_empty_tier_rejected(self):
         import pytest
+
         with pytest.raises(ValueError, match="Invalid tier"):
             create_session("", "test")
 
@@ -512,6 +515,7 @@ class TestTierEnumValidation:
         import pytest
 
         from draft_protocol.storage import update_session
+
         sid = create_session("CASUAL", "test")
         with pytest.raises(ValueError, match="Invalid tier"):
             update_session(sid, tier="INVALID")

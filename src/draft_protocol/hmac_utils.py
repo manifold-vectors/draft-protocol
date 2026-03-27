@@ -43,8 +43,7 @@ def _get_secret() -> bytes:
             secret = "vector-gate-dev-secret-DO-NOT-USE-IN-PRODUCTION"
         else:
             raise RuntimeError(
-                "GATE_HMAC_SECRET not set. Set the environment variable or "
-                "set DRAFT_DEV_MODE=1 for local development."
+                "GATE_HMAC_SECRET not set. Set the environment variable or set DRAFT_DEV_MODE=1 for local development."
             )
     return secret.encode()
 
@@ -121,6 +120,7 @@ def verify_assertion(assertion: dict, max_age_seconds: int = 300) -> dict:
 
 
 # ── Legacy compat: gate_passed signing (wraps new generalized API) ──
+
 
 def sign_gate_pass(session_id: str) -> str:
     """Compute HMAC for a gate pass event (legacy format: ts:hex).

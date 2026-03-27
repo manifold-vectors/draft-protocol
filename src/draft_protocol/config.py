@@ -60,11 +60,11 @@ TIER_TO_LEGACY = {
 
 # Per-tier DRAFT ceremony depth
 TIER_CEREMONY = {
-    "TRIVIAL": "invisible",      # No output — internal only
-    "LOOKUP": "tag",             # One-line classification tag
-    "TASK": "semi_visible",      # Summary line + quick_confirm path
-    "MULTI": "visible",          # Visible mapping + targeted elicitation (D+T min)
-    "CONSEQUENTIAL": "full",     # Full 7-step, DA, review mandatory
+    "TRIVIAL": "invisible",  # No output — internal only
+    "LOOKUP": "tag",  # One-line classification tag
+    "TASK": "semi_visible",  # Summary line + quick_confirm path
+    "MULTI": "visible",  # Visible mapping + targeted elicitation (D+T min)
+    "CONSEQUENTIAL": "full",  # Full 7-step, DA, review mandatory
 }
 
 # Per-tier assumption counts
@@ -190,11 +190,34 @@ LOOKUP_TRIGGERS = [
 ]
 
 TRIVIAL_PATTERNS = {
-    "yes", "no", "done", "ok", "okay", "sure", "thanks",
-    "thank you", "continue", "proceed", "go", "next",
-    "hi", "hello", "hey", "good morning", "good evening",
-    "bye", "goodbye", "got it", "noted", "roger",
-    "yep", "nope", "ack", "k", "y", "n",
+    "yes",
+    "no",
+    "done",
+    "ok",
+    "okay",
+    "sure",
+    "thanks",
+    "thank you",
+    "continue",
+    "proceed",
+    "go",
+    "next",
+    "hi",
+    "hello",
+    "hey",
+    "good morning",
+    "good evening",
+    "bye",
+    "goodbye",
+    "got it",
+    "noted",
+    "roger",
+    "yep",
+    "nope",
+    "ack",
+    "k",
+    "y",
+    "n",
 }
 
 # ── Dimensions ────────────────────────────────────────────
