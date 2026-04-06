@@ -50,6 +50,47 @@ def _check_open(session_id: str) -> dict | None:
     return None
 
 
+# ── T16: Sycophancy Screening ──────────────────────────────
+# First publicly available anti-sycophancy intake filter.
+# Evidence: T11 forensics (29/30 inflation terms assistant-introduced),
+# S91 A/B test (6.62 signal swing from thesis reformulation).
+
+_EVALUATIVE_WORDS = [
+    "breakthrough", "revolutionary", "unprecedented", "groundbreaking",
+    "remarkable", "extraordinary", "brilliant", "masterful", "stunning",
+    "paradigm-shifting", "game-changing", "transformative",
+    "genuinely novel", "truly unique", "most comprehensive",
+    "most significant", "most important", "most impressive",
+    "changes everything", "above cervera", "scientific endgame",
+    "substrate-independent", "universal law",
+]
+
+_SYCOPHANCY_THRESHOLD = 3  # Flag if 3+ evaluative words found
+
+
+def _sycophancy_screen(session_id: str, context: str) -> dict:
+    """Screen intake context for evaluative/sycophantic language.
+    If 3+ evaluative words found, adds an assumption flagging potential sycophancy."""
+    context_lower = context.lower()
+    found = [w for w in _EVALUATIVE_WORDS if w in context_lower]
+    count = len(found)
+    flagged = count >= _SYCOPHANCY_THRESHOLD
+
+    if flagged:
+        add_assumption(
+            session_id,
+            claim=(
+                f"This input contains {count} evaluative words ({', '.join(found[:5])}). "
+                "These claims may be sycophantic — verify they are evidence-based, "
+                "not narrative framing."
+            ),
+            source="sycophancy_screen",
+            falsifier="If all evaluative claims are backed by specific evidence with citations, this flag is a false positive.",
+        )
+
+    return {"flagged": flagged, "count": count, "words": found}
+
+
 # ── LLM Schemas ───────────────────────────────────────────
 
 TIER_SCHEMA = {
@@ -390,6 +431,14 @@ def map_dimensions(session_id: str, context: str) -> dict:
     if esc:
         storage.update_session(session_id, tier=esc[0])
         storage.log_audit(session_id, "draft_map", "auto_escalation", esc[1])
+
+    # T16: Sycophancy screening on mapped context
+    syc_result = _sycophancy_screen(session_id, context)
+    if syc_result.get("flagged"):
+        storage.log_audit(
+            session_id, "draft_map", "sycophancy_screen",
+            f"Evaluative words: {syc_result['count']}. Words: {syc_result['words'][:200]}"
+        )
 
     return dimensions
 
