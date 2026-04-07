@@ -1,4 +1,4 @@
-# Release Process — Vector Systems Standard
+# Release Process — Manifold Vector Standard
 
 **Rule:** No public release ships without passing all gates.
 **Automation:** Python Semantic Release (PSR) handles version bumping, changelog generation, tagging, and publishing. You commit; PSR releases.
