@@ -113,7 +113,7 @@ class TestSessionEndpoint:
     def test_create_session_empty_rejects(self):
         handler, wfile = make_handler("POST", "/session", {"message": ""})
         handler.do_POST()
-        status, body = parse_response(wfile)
+        status, _body = parse_response(wfile)
         assert status == 400
 
 
@@ -121,11 +121,11 @@ class TestNotFoundEndpoint:
     def test_get_unknown_path(self):
         handler, wfile = make_handler("GET", "/nonexistent")
         handler.do_GET()
-        status, body = parse_response(wfile)
+        status, _body = parse_response(wfile)
         assert status == 404
 
     def test_post_unknown_path(self):
         handler, wfile = make_handler("POST", "/nonexistent", {"data": "test"})
         handler.do_POST()
-        status, body = parse_response(wfile)
+        status, _body = parse_response(wfile)
         assert status == 404

@@ -37,39 +37,39 @@ from draft_protocol.storage import (  # noqa: E402
 
 class TestTierClassification:
     def test_casual_greeting(self):
-        tier, reason, conf = classify_tier("hey what's up")
+        tier, _reason, _conf = classify_tier("hey what's up")
         assert tier in ("TRIVIAL", "CASUAL")
 
     def test_casual_short_question(self):
-        tier, reason, conf = classify_tier("what time is it?")
+        tier, _reason, _conf = classify_tier("what time is it?")
         assert tier in ("LOOKUP", "TRIVIAL", "CASUAL")
 
     def test_standard_build(self):
-        tier, reason, conf = classify_tier("build a Python script to parse CSV files")
+        tier, _reason, _conf = classify_tier("build a Python script to parse CSV files")
         assert tier in ("TASK", "STANDARD")
 
     def test_standard_implement(self):
-        tier, reason, conf = classify_tier("implement a caching layer for the API")
+        tier, _reason, _conf = classify_tier("implement a caching layer for the API")
         assert tier in ("TASK", "STANDARD")
 
     def test_consequential_governance(self):
-        tier, reason, conf = classify_tier("restructure the governance architecture")
+        tier, _reason, _conf = classify_tier("restructure the governance architecture")
         assert tier == "CONSEQUENTIAL"
 
     def test_consequential_authority(self):
-        tier, reason, conf = classify_tier("change the authority model for deployments")
+        tier, _reason, _conf = classify_tier("change the authority model for deployments")
         assert tier == "CONSEQUENTIAL"
 
     def test_empty_rejected(self):
-        tier, reason, conf = classify_tier("")
+        tier, _reason, _conf = classify_tier("")
         assert tier == "REJECTED"
 
     def test_whitespace_rejected(self):
-        tier, reason, conf = classify_tier("   \n\t  ")
+        tier, _reason, _conf = classify_tier("   \n\t  ")
         assert tier == "REJECTED"
 
     def test_none_rejected(self):
-        tier, reason, conf = classify_tier(None)
+        tier, _reason, _conf = classify_tier(None)
         assert tier == "REJECTED"
 
     def test_confidence_range(self):
