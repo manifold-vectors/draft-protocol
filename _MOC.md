@@ -25,7 +25,7 @@ Open source library. PyPI v1.3.2. The protocol layer for governed deliberation.
 - Releasing playbook
 
 ## Related
-- [[../../lab/governance/_MOC|Lab Governance]] — DRAFT is what Congress runs
-- [[../../lab/standards/_MOC|Standards]] — DRAFT-related ratified standards
+- [[lab/governance/_MOC|Lab Governance]] — DRAFT is what Congress runs
+- [[lab/standards/_MOC|Standards]] — DRAFT-related ratified standards
 
-← [[../_MOC|Products]] · [[../../00-INDEX|🏠 Master Index]] · [[../00-INDEX|🏠 Master Index]]
+← [[products/_MOC|Products]] · [[products/00-INDEX|🏠 Master Index]] · [[products/00-INDEX|🏠 Master Index]]
