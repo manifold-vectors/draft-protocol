@@ -1,3 +1,14 @@
+---
+title: docs — README
+type: readme
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, readme, products, draft-protocol]
+---
+
 # Documentation
 
 ## Overview

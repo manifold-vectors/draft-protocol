@@ -1,3 +1,14 @@
+---
+title: THREAT MODEL
+type: doc
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, doc, products, draft-protocol]
+---
+
 # Threat Model: Intake Governance Attack Surface
 
 Most AI governance tools don't publish a threat model. We do, because if you're trusting DRAFT to sit between humans and AI execution, you should know exactly what it defends against, what it doesn't, and where the boundaries are.

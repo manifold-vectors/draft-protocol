@@ -1,3 +1,14 @@
+---
+title: draft-protocol — SECURITY
+type: security
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, security, products, draft-protocol]
+---
+
 # Security Policy
 
 ## Supported Versions

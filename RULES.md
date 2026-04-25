@@ -1,3 +1,14 @@
+---
+title: draft-protocol — RULES
+type: rules
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, rules, products, draft-protocol]
+---
+
 # RULES.md — Procedural Memory
 
 > Lessons learned, process rules, and patterns for this repo.

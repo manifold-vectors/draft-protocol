@@ -1,3 +1,14 @@
+---
+title: CODE OF CONDUCT
+type: policy
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, policy, products, draft-protocol]
+---
+
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge

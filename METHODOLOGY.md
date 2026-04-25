@@ -1,3 +1,14 @@
+---
+title: METHODOLOGY
+type: doc
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, doc, products, draft-protocol]
+---
+
 # Methodology: Cross-Disciplinary Validation of DRAFT Protocol
 
 DRAFT Protocol was not designed in isolation. After shipping v1.0, we stress-tested the entire framework against **eight established human-elicitation methodologies** — each with decades of empirical validation in environments where extracting accurate information from humans is critical and mistakes have real consequences.

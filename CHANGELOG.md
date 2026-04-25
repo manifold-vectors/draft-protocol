@@ -1,3 +1,14 @@
+---
+title: draft-protocol — CHANGELOG
+type: changelog
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, changelog, products, draft-protocol]
+---
+
 # Changelog
 
 All notable changes to this project will be documented in this file.

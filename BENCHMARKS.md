@@ -1,3 +1,14 @@
+---
+title: BENCHMARKS
+type: doc
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, doc, products, draft-protocol]
+---
+
 # Benchmarks
 
 These numbers come from real production use of DRAFT Protocol in daily AI-assisted development work. They are not synthetic. They are not cherry-picked. They include honest caveats about what we have and haven't measured yet.

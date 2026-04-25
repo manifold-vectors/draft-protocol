@@ -1,3 +1,14 @@
+---
+title: INTEGRATIONS
+type: doc
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, doc, products, draft-protocol]
+---
+
 # Integrations: 5-Minute Quickstarts
 
 DRAFT Protocol works with any AI framework that makes tool calls. Each quickstart below is self-contained, copy-paste ready, and shows the difference between ungoverned and governed execution.

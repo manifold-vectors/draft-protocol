@@ -1,3 +1,14 @@
+---
+title: draft-protocol — AGENTS
+type: operating-manual
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, operating-manual, products, draft-protocol]
+---
+
 # AGENTS.md — AI Agent Instructions
 
 > For AI coding assistants (Copilot, Cursor, Claude, etc.) working in this repo.

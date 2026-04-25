@@ -1,3 +1,14 @@
+---
+title: draft-protocol — ROADMAP
+type: roadmap
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, roadmap, products, draft-protocol]
+---
+
 # Roadmap
 
 What's shipped, what's next, what we won't build. Updated as priorities change based on real usage.

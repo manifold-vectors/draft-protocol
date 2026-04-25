@@ -1,3 +1,14 @@
+---
+title: RELEASING
+type: doc
+domain: company
+subdomain: products/draft-protocol
+status: active
+created: 2026-04-24
+updated: 2026-04-24
+tags: [company, doc, products, draft-protocol]
+---
+
 # Release Process — Manifold Vector Standard
 
 **Rule:** No public release ships without passing all gates.
