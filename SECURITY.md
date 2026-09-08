@@ -4,11 +4,11 @@ type: security
 domain: company
 subdomain: products/draft-protocol
 status: active
-created: 2026-04-24
-updated: 2026-04-24
-tags: [company, security, products, draft-protocol]
+date: 2026-04-24
+modified: 2026-04-24
+tags: [company, security, products, draft-protocol, ude/regulation]
+ude_force: regulation
 ---
-
 # Security Policy
 
 ## Supported Versions

@@ -8,12 +8,12 @@ status: open-source
 license: open-source
 pypi: draft-protocol
 version: 1.3.2
-created: 2026-04-24
-updated: 2026-04-24
-tags: [moc, product, draft-protocol, open-source, pypi]
+date: 2026-04-24
+modified: 2026-04-24
+tags: [moc, product, draft-protocol, open-source, pypi, ude/state]
 aliases: [DRAFT, DRAFT Protocol]
+ude_force: state
 ---
-
 # 📜 DRAFT Protocol
 
 Open source library. PyPI v1.3.2. The protocol layer for governed deliberation.

@@ -4,11 +4,11 @@ type: doc
 domain: company
 subdomain: products/draft-protocol
 status: active
-created: 2026-04-24
-updated: 2026-04-24
-tags: [company, doc, products, draft-protocol]
+date: 2026-04-24
+modified: 2026-04-24
+tags: [company, doc, products, draft-protocol, ude/state]
+ude_force: state
 ---
-
 # Conformance Findings
 
 ## Quick Reference

@@ -4,11 +4,11 @@ type: changelog
 domain: company
 subdomain: products/draft-protocol
 status: active
-created: 2026-04-24
-updated: 2026-04-24
-tags: [company, changelog, products, draft-protocol]
+date: 2026-04-24
+modified: 2026-04-24
+tags: [company, changelog, products, draft-protocol, ude/state]
+ude_force: state
 ---
-
 # Changelog
 
 All notable changes to this project will be documented in this file.

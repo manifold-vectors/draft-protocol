@@ -4,11 +4,11 @@ type: roadmap
 domain: company
 subdomain: products/draft-protocol
 status: active
-created: 2026-04-24
-updated: 2026-04-24
-tags: [company, roadmap, products, draft-protocol]
+date: 2026-04-24
+modified: 2026-04-24
+tags: [company, roadmap, products, draft-protocol, ude/state]
+ude_force: state
 ---
-
 # Roadmap
 
 What's shipped, what's next, what we won't build. Updated as priorities change based on real usage.

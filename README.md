@@ -4,11 +4,11 @@ type: readme
 domain: company
 subdomain: products/draft-protocol
 status: active
-created: 2026-04-24
-updated: 2026-04-24
-tags: [company, readme, products, draft-protocol]
+date: 2026-04-24
+modified: 2026-04-24
+tags: [company, readme, products, draft-protocol, ude/console]
+ude_force: console
 ---
-
 # DRAFT Protocol
 
 [![CI](https://github.com/manifold-vectors/draft-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/manifold-vectors/draft-protocol/actions/workflows/ci.yml)

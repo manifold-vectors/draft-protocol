@@ -4,11 +4,11 @@ type: doc
 domain: company
 subdomain: products/draft-protocol
 status: active
-created: 2026-04-24
-updated: 2026-04-24
-tags: [company, doc, products, draft-protocol]
+date: 2026-04-24
+modified: 2026-04-24
+tags: [company, doc, products, draft-protocol, ude/state]
+ude_force: state
 ---
-
 # REST API Reference
 
 > **⚠️ Security Warning:** The REST API is designed for **local development only**. It binds to `127.0.0.1` by default and should never be exposed to the public internet without authentication. If you need remote access, place the server behind a reverse proxy with TLS and authentication, or set `DRAFT_REST_AUTH` to require a bearer token. See [SECURITY.md](../SECURITY.md) and [CF-013](../CONFORMANCE.md#cf-013-rest-api-missing-authentication) for details.
