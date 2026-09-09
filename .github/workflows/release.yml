@@ -50,10 +50,17 @@ jobs:
       url: https://pypi.org/project/draft-protocol/
 
     steps:
+      # Was secrets.GH_TOKEN, a PAT created 2026-02-25 that has since expired, so
+      # checkout failed with "could not read Username for https://github.com" and
+      # every push to main since 2026-03-27 failed at this step. GITHUB_TOKEN is
+      # minted per run, never expires, and the workflow already grants it
+      # contents: write, which is all semantic-release needs to push the bump
+      # commit, the tag and the GitHub Release. PyPI upload uses trusted
+      # publishing via id-token: write, so it needs no token at all.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -69,7 +76,7 @@ jobs:
       # commits, tags, pushes — all automatically
       - name: Semantic Release — Version
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: semantic-release version
 
       - name: Build package
@@ -82,5 +89,5 @@ jobs:
 
       - name: Semantic Release — GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: semantic-release publish
